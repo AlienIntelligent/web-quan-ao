@@ -1,14 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { cartStorage } from "../services/api";
+import { cartStorage, categoryApi } from "../services/api";
 
 const Header = () => {
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
+  const [categories, setCategories] = useState([]);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchCategoryId, setSearchCategoryId] = useState("");
+  const [searchMinPrice, setSearchMinPrice] = useState("");
+  const [searchMaxPrice, setSearchMaxPrice] = useState("");
   const { isAuthenticated, logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    categoryApi
+      .getAll()
+      .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchKeyword(params.get("keyword") || "");
+    setSearchCategoryId(params.get("categoryId") || "");
+    setSearchMinPrice(params.get("minPrice") || "");
+    setSearchMaxPrice(params.get("maxPrice") || "");
+  }, [location.search]);
 
   useEffect(() => {
     const syncCart = () => {
@@ -30,6 +50,25 @@ const Header = () => {
     e.preventDefault();
     logout();
     navigate("/");
+  };
+
+  const handleProductSearch = (e) => {
+    e.preventDefault();
+
+    const params = new URLSearchParams();
+    const keyword = searchKeyword.trim();
+    const minPrice = searchMinPrice.trim();
+    const maxPrice = searchMaxPrice.trim();
+
+    if (keyword) params.set("keyword", keyword);
+    if (searchCategoryId) params.set("categoryId", searchCategoryId);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
+
+    navigate({
+      pathname: "/shop",
+      search: params.toString(),
+    });
   };
 
   return (
@@ -126,17 +165,49 @@ const Header = () => {
                 </div>
               </div>
               <div className="col-lg-7 col-md-7">
-                <div className="advanced-search">
-                  <button type="button" className="category-btn">
-                    Tất cả danh mục
-                  </button>
+                <form className="advanced-search product-search-form" onSubmit={handleProductSearch}>
+                  <select
+                    className="category-btn"
+                    value={searchCategoryId}
+                    onChange={(e) => setSearchCategoryId(e.target.value)}
+                    aria-label="Danh mục sản phẩm"
+                  >
+                    <option value="">Tất cả danh mục</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
                   <div className="input-group">
-                    <input type="text" placeholder="Bạn cần tìm gì?" />
-                    <button type="button">
+                    <input
+                      type="text"
+                      className="keyword-input"
+                      placeholder="Bạn cần tìm gì?"
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      className="price-input"
+                      min="0"
+                      placeholder="Giá từ"
+                      value={searchMinPrice}
+                      onChange={(e) => setSearchMinPrice(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      className="price-input"
+                      min="0"
+                      placeholder="Giá đến"
+                      value={searchMaxPrice}
+                      onChange={(e) => setSearchMaxPrice(e.target.value)}
+                    />
+                    <button type="submit">
                       <i className="ti-search"></i>
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
               <div className="col-lg-3 text-right col-md-3">
                 <ul className="nav-right">

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import LayoutPublic from "../components/LayoutPublic";
-import { cartStorage, orderApi } from "../services/api";
+import { cartStorage, couponStorage, orderApi, promotionApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const Checkout = () => {
@@ -18,10 +18,49 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [submitting, setSubmitting] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
   const cartItems = cartStorage.getItems();
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = cartItems.length ? 10 : 0;
-  const total = subtotal + shipping;
+  const discount = appliedCoupon?.discountAmount || 0;
+  const total = Math.max(0, subtotal + shipping - discount);
+
+  useEffect(() => {
+    const savedCoupon = couponStorage.get();
+    if (!savedCoupon?.code || !cartItems.length) {
+      setAppliedCoupon(null);
+      setCouponCode(savedCoupon?.code || "");
+      return;
+    }
+
+    let cancelled = false;
+    promotionApi
+      .validate({
+        code: savedCoupon.code,
+        orderSubtotal: subtotal,
+        shippingFee: shipping,
+      })
+      .then((res) => {
+        if (cancelled) return;
+        setAppliedCoupon(res.data);
+        setCouponCode(res.data.code);
+        couponStorage.set(res.data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAppliedCoupon(null);
+        couponStorage.clear();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [subtotal, shipping, cartItems.length]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,14 +70,57 @@ const Checkout = () => {
     }));
   };
 
+  const applyCoupon = async (e) => {
+    e.preventDefault();
+    const code = couponCode.trim();
+    setCouponMessage("");
+    setCouponError("");
+
+    if (!code) {
+      setCouponError("Vui lòng nhập mã giảm giá.");
+      return;
+    }
+
+    if (!cartItems.length) {
+      setCouponError("Giỏ hàng đang trống.");
+      return;
+    }
+
+    setApplyingCoupon(true);
+    try {
+      const response = await promotionApi.validate({
+        code,
+        orderSubtotal: subtotal,
+        shippingFee: shipping,
+      });
+      setAppliedCoupon(response.data);
+      couponStorage.set(response.data);
+      setCouponMessage(response.data.message || "Áp dụng mã giảm giá thành công.");
+    } catch (error) {
+      setAppliedCoupon(null);
+      couponStorage.clear();
+      setCouponError(error.response?.data?.message || "Không thể áp dụng mã giảm giá.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponMessage("");
+    setCouponError("");
+    couponStorage.clear();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cartItems = cartStorage.getItems();
+    const currentCartItems = cartStorage.getItems();
     if (!isAuthenticated) {
       alert("Bạn cần đăng nhập để đặt hàng.");
       return;
     }
-    if (cartItems.length === 0) {
+    if (currentCartItems.length === 0) {
       alert("Giỏ hàng đang trống.");
       return;
     }
@@ -47,12 +129,15 @@ const Checkout = () => {
     try {
       await orderApi.create({
         shippingAddress: formData.address,
-        items: cartItems.map((x) => ({
+        shippingFee: shipping,
+        promotionCode: appliedCoupon?.code || null,
+        items: currentCartItems.map((x) => ({
           productId: x.productId,
           quantity: x.quantity,
         })),
       });
       cartStorage.clear();
+      couponStorage.clear();
       alert("Đặt hàng thành công!");
       setFormData({
         firstName: "",
@@ -73,7 +158,6 @@ const Checkout = () => {
 
   return (
     <LayoutPublic>
-      {/* Breadcrumb Section Begin */}
       <section className="breadcrumb-section set-bg" data-setbg="/img/breadcrumb.jpg">
         <div className="container">
           <div className="row">
@@ -83,9 +167,7 @@ const Checkout = () => {
           </div>
         </div>
       </section>
-      {/* Breadcrumb Section End */}
 
-      {/* Checkout Section Begin */}
       <section className="checkout-section spad">
         <div className="container">
           <form onSubmit={handleSubmit} className="checkout-form">
@@ -178,7 +260,6 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-
               </div>
               <div className="col-lg-4">
                 <div className="place-order">
@@ -198,10 +279,39 @@ const Checkout = () => {
                       <li className="fw-normal">
                         Vận chuyển <span>${shipping.toFixed(2)}</span>
                       </li>
+                      {appliedCoupon && (
+                        <li className="fw-normal">
+                          Giảm giá <span>-${discount.toFixed(2)}</span>
+                        </li>
+                      )}
                       <li className="total-price">
                         Tổng cộng <span>${total.toFixed(2)}</span>
                       </li>
                     </ul>
+                    <div className="discount-coupon mb-4">
+                      <h6>Mã giảm giá</h6>
+                      <form className="coupon-form" onSubmit={applyCoupon}>
+                        <input
+                          type="text"
+                          placeholder="Nhập mã giảm giá"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                        />
+                        <button type="submit" className="site-btn coupon-btn" disabled={applyingCoupon}>
+                          {applyingCoupon ? "Đang kiểm tra..." : "Áp dụng"}
+                        </button>
+                      </form>
+                      {appliedCoupon && (
+                        <p className="text-success mt-2 mb-0">
+                          Đã áp dụng {appliedCoupon.code}.{" "}
+                          <button type="button" className="btn btn-link p-0" onClick={removeCoupon}>
+                            Bỏ mã
+                          </button>
+                        </p>
+                      )}
+                      {couponMessage && <p className="text-success mt-2 mb-0">{couponMessage}</p>}
+                      {couponError && <p className="text-danger mt-2 mb-0">{couponError}</p>}
+                    </div>
                     <div className="payment-check">
                       <div className="pc-item">
                         <label htmlFor="pm-card">
@@ -242,7 +352,6 @@ const Checkout = () => {
           </form>
         </div>
       </section>
-      {/* Checkout Section End */}
     </LayoutPublic>
   );
 };

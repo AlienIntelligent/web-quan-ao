@@ -120,5 +120,64 @@ namespace BaseCore.Services
             var promotion = await _promotionRepository.GetWithProductsAsync(promotionId);
             return promotion;
         }
+
+        public async Task<PromotionApplicationResult> ApplyPromotionAsync(string code, decimal orderSubtotal, decimal shippingFee)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                throw new ArgumentException("Promotion code is required", nameof(code));
+
+            if (orderSubtotal < 0)
+                throw new ArgumentException("Order subtotal cannot be negative", nameof(orderSubtotal));
+
+            if (shippingFee < 0)
+                throw new ArgumentException("Shipping fee cannot be negative", nameof(shippingFee));
+
+            var promotion = await _promotionRepository.GetByCodeAsync(code.Trim());
+            if (promotion == null)
+                throw new InvalidOperationException("Mã giảm giá không tồn tại.");
+
+            var now = DateTime.Now;
+            if (!promotion.IsActive)
+                throw new InvalidOperationException("Mã giảm giá đã bị vô hiệu.");
+
+            if (promotion.StartDate > now || promotion.EndDate < now)
+                throw new InvalidOperationException("Mã giảm giá không còn trong thời gian áp dụng.");
+
+            if (promotion.UsageLimit.HasValue && promotion.UsedCount >= promotion.UsageLimit.Value)
+                throw new InvalidOperationException("Mã giảm giá đã hết lượt sử dụng.");
+
+            if (orderSubtotal < promotion.MinimumOrderAmount)
+                throw new InvalidOperationException($"Đơn hàng tối thiểu {promotion.MinimumOrderAmount:N0} để dùng mã này.");
+
+            var discountAmount = CalculateDiscountAmount(promotion, orderSubtotal, shippingFee);
+            var finalTotal = Math.Max(0, orderSubtotal + shippingFee - discountAmount);
+
+            return new PromotionApplicationResult
+            {
+                Promotion = promotion,
+                DiscountAmount = discountAmount,
+                FinalTotal = finalTotal,
+                Message = "Áp dụng mã giảm giá thành công."
+            };
+        }
+
+        private static decimal CalculateDiscountAmount(Promotion promotion, decimal orderSubtotal, decimal shippingFee)
+        {
+            var discountType = (promotion.DiscountType ?? "").Trim().ToUpperInvariant();
+            decimal discountAmount = discountType switch
+            {
+                "PERCENT" => orderSubtotal * promotion.DiscountValue / 100,
+                "AMOUNT" => promotion.DiscountValue,
+                "FREESHIP" => shippingFee,
+                _ => throw new InvalidOperationException("Loại mã giảm giá không hợp lệ.")
+            };
+
+            if (promotion.MaximumDiscountAmount.HasValue)
+            {
+                discountAmount = Math.Min(discountAmount, promotion.MaximumDiscountAmount.Value);
+            }
+
+            return Math.Min(Math.Max(0, discountAmount), orderSubtotal + shippingFee);
+        }
     }
 }

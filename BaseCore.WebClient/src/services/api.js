@@ -113,6 +113,7 @@ export const originApi = {
 export const promotionApi = {
     getAll: (params) => api.get('/promotions', { params }),
     getById: (id) => api.get(`/promotions/${id}`),
+    validate: (data) => api.post('/promotions/validate', data),
     create: (data) => api.post('/promotions', data),
     update: (id, data) => api.put(`/promotions/${id}`, data),
     delete: (id) => api.delete(`/promotions/${id}`),
@@ -165,6 +166,8 @@ export const cartDetailApi = {
 
 const CART_KEY = 'fashi_cart';
 const CART_EVENT = 'fashi-cart-updated';
+const COUPON_KEY = 'fashi_coupon';
+const COUPON_EVENT = 'fashi-coupon-updated';
 
 const readCart = () => {
     try {
@@ -215,6 +218,31 @@ export const cartStorage = {
         const total = items.reduce((sum, x) => sum + x.quantity * x.price, 0);
         return { count, total, items };
     },
+};
+
+const readCoupon = () => {
+    try {
+        const raw = localStorage.getItem(COUPON_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const writeCoupon = (coupon) => {
+    if (coupon) {
+        localStorage.setItem(COUPON_KEY, JSON.stringify(coupon));
+    } else {
+        localStorage.removeItem(COUPON_KEY);
+    }
+    window.dispatchEvent(new Event(COUPON_EVENT));
+};
+
+export const couponStorage = {
+    eventName: COUPON_EVENT,
+    get: () => readCoupon(),
+    set: (coupon) => writeCoupon(coupon),
+    clear: () => writeCoupon(null),
 };
 
 export default api;

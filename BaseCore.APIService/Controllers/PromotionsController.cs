@@ -57,6 +57,38 @@ namespace BaseCore.APIService.Controllers
             return Ok(ToDto(promotion));
         }
 
+        [HttpPost("validate")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Validate([FromBody] PromotionValidateDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest(new { message = "Vui lòng nhập mã giảm giá." });
+
+            try
+            {
+                var result = await _promotionService.ApplyPromotionAsync(
+                    dto.Code,
+                    dto.OrderSubtotal,
+                    dto.ShippingFee);
+
+                return Ok(new PromotionValidationResultDto
+                {
+                    PromotionId = result.Promotion.Id,
+                    Code = result.Promotion.Code,
+                    Name = result.Promotion.Name,
+                    DiscountType = result.Promotion.DiscountType,
+                    DiscountValue = result.Promotion.DiscountValue,
+                    DiscountAmount = result.DiscountAmount,
+                    FinalTotal = result.FinalTotal,
+                    Message = result.Message
+                });
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] PromotionCreateDto dto)
@@ -190,6 +222,25 @@ namespace BaseCore.APIService.Controllers
             public DateTime? EndDate { get; set; }
             public int? UsageLimit { get; set; }
             public bool? IsActive { get; set; }
+        }
+
+        public class PromotionValidateDto
+        {
+            public string Code { get; set; } = "";
+            public decimal OrderSubtotal { get; set; }
+            public decimal ShippingFee { get; set; }
+        }
+
+        public class PromotionValidationResultDto
+        {
+            public int PromotionId { get; set; }
+            public string Code { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string DiscountType { get; set; } = "";
+            public decimal DiscountValue { get; set; }
+            public decimal DiscountAmount { get; set; }
+            public decimal FinalTotal { get; set; }
+            public string Message { get; set; } = "";
         }
     }
 }

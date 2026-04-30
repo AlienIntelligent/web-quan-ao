@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
 import { cartStorage, categoryApi, productApi } from "../services/api";
 
@@ -12,14 +12,16 @@ const Shop = () => {
   const [maxPrice, setMaxPrice] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [error, setError] = useState("");
 
-  const loadData = async () => {
+  const loadData = async (filters) => {
     const response = await productApi.search({
-      keyword: keyword || undefined,
-      categoryId: categoryId || undefined,
-      minPrice: minPrice || undefined,
-      maxPrice: maxPrice || undefined,
-      page,
+      keyword: filters.keyword || undefined,
+      categoryId: filters.categoryId || undefined,
+      minPrice: filters.minPrice || undefined,
+      maxPrice: filters.maxPrice || undefined,
+      page: filters.page,
       pageSize: 9,
     });
     setItems(response.data.items || []);
@@ -31,13 +33,58 @@ const Shop = () => {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [page]);
+    const queryPage = Number(searchParams.get("page") || 1);
+    const nextFilters = {
+      keyword: searchParams.get("keyword") || "",
+      categoryId: searchParams.get("categoryId") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+      page: Number.isFinite(queryPage) && queryPage > 0 ? queryPage : 1,
+    };
 
-  const handleSearch = async (e) => {
+    setKeyword(nextFilters.keyword);
+    setCategoryId(nextFilters.categoryId);
+    setMinPrice(nextFilters.minPrice);
+    setMaxPrice(nextFilters.maxPrice);
+    setPage(nextFilters.page);
+    setError("");
+    loadData(nextFilters).catch(() => {
+      setItems([]);
+      setTotalPages(1);
+      setError("Không thể tải danh sách sản phẩm.");
+    });
+  }, [searchParams]);
+
+  const buildSearchParams = (nextPage = 1) => {
+    const params = new URLSearchParams();
+    const normalizedKeyword = keyword.trim();
+    const normalizedMinPrice = minPrice.trim();
+    const normalizedMaxPrice = maxPrice.trim();
+
+    if (normalizedKeyword) params.set("keyword", normalizedKeyword);
+    if (categoryId) params.set("categoryId", categoryId);
+    if (normalizedMinPrice) params.set("minPrice", normalizedMinPrice);
+    if (normalizedMaxPrice) params.set("maxPrice", normalizedMaxPrice);
+    if (nextPage > 1) params.set("page", String(nextPage));
+
+    return params;
+  };
+
+  const handleSearch = (e) => {
     e.preventDefault();
-    setPage(1);
-    await loadData();
+    const min = minPrice === "" ? null : Number(minPrice);
+    const max = maxPrice === "" ? null : Number(maxPrice);
+
+    if (min !== null && max !== null && min > max) {
+      setError("Giá từ không được lớn hơn giá đến.");
+      return;
+    }
+
+    setSearchParams(buildSearchParams(1));
+  };
+
+  const handlePageChange = (nextPage) => {
+    setSearchParams(buildSearchParams(nextPage));
   };
 
   const addToCart = (product) => {
@@ -116,6 +163,7 @@ const Shop = () => {
                   <button type="submit" className="primary-btn">
                     Tìm kiếm
                   </button>
+                  {error && <p className="text-danger mt-2 mb-0">{error}</p>}
                 </form>
               </div>
             </div>
@@ -167,14 +215,14 @@ const Shop = () => {
                 <button
                   className="primary-btn mr-2"
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => handlePageChange(page - 1)}
                 >
                   Trước
                 </button>
                 <button
                   className="primary-btn"
                   disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => handlePageChange(page + 1)}
                 >
                   Sau
                 </button>

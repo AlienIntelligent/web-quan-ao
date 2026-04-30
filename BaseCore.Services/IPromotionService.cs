@@ -16,5 +16,14 @@ namespace BaseCore.Services
         Task DeletePromotionAsync(int id);
         Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(string? keyword, bool? isActive, int page, int pageSize);
         Task<Promotion?> GetPromotionWithProductsAsync(int promotionId);
+        Task<PromotionApplicationResult> ApplyPromotionAsync(string code, decimal orderSubtotal, decimal shippingFee);
+    }
+
+    public class PromotionApplicationResult
+    {
+        public Promotion Promotion { get; set; } = null!;
+        public decimal DiscountAmount { get; set; }
+        public decimal FinalTotal { get; set; }
+        public string Message { get; set; } = "";
     }
 }

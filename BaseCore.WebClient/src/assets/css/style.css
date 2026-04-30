@@ -489,6 +489,44 @@ ol {
 	cursor: pointer;
 }
 
+.inner-header .advanced-search.product-search-form {
+	display: flex;
+}
+
+.inner-header .advanced-search.product-search-form .category-btn {
+	width: 30%;
+	height: 100%;
+	max-width: 30%;
+	padding-top: 0;
+	padding-bottom: 0;
+	padding-right: 28px;
+}
+
+.inner-header .advanced-search.product-search-form .input-group {
+	display: flex;
+	max-width: 70%;
+}
+
+.inner-header .advanced-search.product-search-form .input-group input {
+	width: auto;
+	min-width: 0;
+	padding-left: 14px;
+	padding-right: 8px;
+}
+
+.inner-header .advanced-search.product-search-form .keyword-input {
+	flex: 1 1 auto;
+}
+
+.inner-header .advanced-search.product-search-form .price-input {
+	flex: 0 0 92px;
+}
+
+.inner-header .advanced-search.product-search-form .input-group button {
+	position: static;
+	flex: 0 0 52px;
+}
+
 .inner-header .nav-right {
 	padding: 10px 0;
 }

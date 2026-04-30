@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BaseCore.Entities;
 using BaseCore.Repository.EFCore;
+using BaseCore.Services;
 using System.Security.Claims;
 
 namespace BaseCore.APIService.Controllers
@@ -30,15 +31,21 @@ namespace BaseCore.APIService.Controllers
         private readonly IOrderRepository _orderRepository;
         private readonly IOrderDetailRepository _orderDetailRepository;
         private readonly IProductRepository _productRepository;
+        private readonly IPromotionService _promotionService;
+        private readonly IRepository<OrderPromotion> _orderPromotionRepository;
 
         public OrdersController(
             IOrderRepository orderRepository,
             IOrderDetailRepository orderDetailRepository,
-            IProductRepository productRepository)
+            IProductRepository productRepository,
+            IPromotionService promotionService,
+            IRepository<OrderPromotion> orderPromotionRepository)
         {
             _orderRepository = orderRepository;
             _orderDetailRepository = orderDetailRepository;
             _productRepository = productRepository;
+            _promotionService = promotionService;
+            _orderPromotionRepository = orderPromotionRepository;
         }
 
         /// <summary>
@@ -107,12 +114,16 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            // Validate products and calculate total
-            decimal totalAmount = 0;
+            // Validate products and calculate subtotal
+            decimal subtotal = 0;
             var orderDetails = new List<OrderDetail>();
+            var productsToUpdate = new List<Product>();
 
             foreach (var item in dto.Items)
             {
+                if (item.Quantity <= 0)
+                    return BadRequest(new { message = "Quantity must be greater than 0" });
+
                 var product = await _productRepository.GetByIdAsync(item.ProductId);
                 if (product == null)
                     return BadRequest(new { message = $"Product {item.ProductId} not found" });
@@ -120,7 +131,7 @@ namespace BaseCore.APIService.Controllers
                 if (product.Stock < item.Quantity)
                     return BadRequest(new { message = $"Insufficient stock for {product.Name}" });
 
-                totalAmount += product.Price * item.Quantity;
+                subtotal += product.Price * item.Quantity;
                 orderDetails.Add(new OrderDetail
                 {
                     ProductId = item.ProductId,
@@ -128,10 +139,29 @@ namespace BaseCore.APIService.Controllers
                     UnitPrice = product.Price
                 });
 
-                // Update stock
                 product.Stock -= item.Quantity;
-                await _productRepository.UpdateAsync(product);
+                productsToUpdate.Add(product);
             }
+
+            var shippingFee = Math.Max(0, dto.ShippingFee);
+            PromotionApplicationResult? promotionResult = null;
+
+            if (!string.IsNullOrWhiteSpace(dto.PromotionCode))
+            {
+                try
+                {
+                    promotionResult = await _promotionService.ApplyPromotionAsync(
+                        dto.PromotionCode,
+                        subtotal,
+                        shippingFee);
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                {
+                    return BadRequest(new { message = ex.Message });
+                }
+            }
+
+            var totalAmount = promotionResult?.FinalTotal ?? subtotal + shippingFee;
 
             var order = new Order
             {
@@ -151,7 +181,38 @@ namespace BaseCore.APIService.Controllers
                 await _orderDetailRepository.AddAsync(detail);
             }
 
-            return CreatedAtAction(nameof(GetById), new { id = order.Id }, new { order, details = orderDetails });
+            foreach (var product in productsToUpdate)
+            {
+                await _productRepository.UpdateAsync(product);
+            }
+
+            if (promotionResult != null)
+            {
+                await _orderPromotionRepository.AddAsync(new OrderPromotion
+                {
+                    OrderId = order.Id,
+                    PromotionId = promotionResult.Promotion.Id,
+                    DiscountAmount = promotionResult.DiscountAmount,
+                    AppliedAt = DateTime.Now
+                });
+
+                promotionResult.Promotion.UsedCount += 1;
+                await _promotionService.UpdatePromotionAsync(promotionResult.Promotion);
+            }
+
+            return CreatedAtAction(nameof(GetById), new { id = order.Id }, new
+            {
+                order,
+                details = orderDetails,
+                promotion = promotionResult == null
+                    ? null
+                    : new
+                    {
+                        id = promotionResult.Promotion.Id,
+                        code = promotionResult.Promotion.Code,
+                        discountAmount = promotionResult.DiscountAmount
+                    }
+            });
         }
 
         /// <summary>
@@ -208,6 +269,8 @@ namespace BaseCore.APIService.Controllers
     {
         public List<OrderItemDto> Items { get; set; } = new();
         public string? ShippingAddress { get; set; }
+        public string? PromotionCode { get; set; }
+        public decimal ShippingFee { get; set; }
     }
 
     public class OrderItemDto
