@@ -82,6 +82,11 @@ const Product = () => {
   const displayPrice = Number(selectedVariant?.price ?? product?.price ?? 0);
   const displayOriginalPrice = product?.originalPrice ?? null;
   const displayStock = Number(selectedVariant?.stock ?? product?.stock ?? 0);
+  const formatMoney = (value) =>
+    Number(value || 0).toLocaleString("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
 
   const roundedAvg = Math.round(averageRating || 0);
   const productImage = useMemo(() => {
@@ -198,9 +203,9 @@ const Product = () => {
                 </div>
                 <div className="pd-desc">
                   <h4>
-                    ${displayPrice.toFixed(2)}
+                    {formatMoney(displayPrice)}
                   {displayOriginalPrice != null && (
-                    <span>${Number(displayOriginalPrice).toFixed(2)}</span>
+                    <span>{formatMoney(displayOriginalPrice)}</span>
                   )}
                   </h4>
                   <p>{product.description}</p>
@@ -266,14 +271,6 @@ const Product = () => {
                     <b>Khối lượng</b> <span>0.5 kg</span>
                   </li>
                 </ul>
-                <div className="pd-share">
-                  <div className="pd-social">
-                    <a href="#"><i className="ti-facebook"></i></a>
-                    <a href="#"><i className="ti-twitter-alt"></i></a>
-                    <a href="#"><i className="ti-linkedin"></i></a>
-                    <a href="#"><i className="ti-pinterest"></i></a>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -375,11 +372,6 @@ const Product = () => {
                       <li className="quick-view">
                         <Link to={`/product/${relId}`}>+ Xem nhanh</Link>
                       </li>
-                      <li className="w-icon">
-                        <a href="#">
-                          <i className="fa fa-random"></i>
-                        </a>
-                      </li>
                     </ul>
                   </div>
                   <div className="pi-text">
@@ -388,7 +380,7 @@ const Product = () => {
                       <h5>Product {relId}</h5>
                     </a>
                     <div className="product-price">
-                      ${(15 + relId * 5).toFixed(2)}
+                      {formatMoney((15 + relId * 5) * 1000)}
                     </div>
                   </div>
                 </div>

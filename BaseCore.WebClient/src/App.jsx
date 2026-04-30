@@ -30,10 +30,10 @@ import Shop from "./pages/Shop";
 import Product from "./pages/Product";
 import ShoppingCart from "./pages/ShoppingCart";
 import Register from "./pages/Register";
-import Contact from "./pages/Contact";
 import Checkout from "./pages/Checkout";
-import Blog from "./pages/Blog";
-import BlogDetails from "./pages/BlogDetails";
+import MyOrders from "./pages/MyOrders";
+import OrderTracking from "./pages/OrderTracking";
+import Profile from "./pages/Profile";
 
 // Wrapper để redirect người dùng đã đăng nhập
 // - Admin → Dashboard
@@ -248,10 +248,10 @@ function AppRoutes() {
       <Route path="/product/:id" element={<Product />} />
       <Route path="/shopping-cart" element={<ShoppingCart />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/contact" element={<Contact />} />
       <Route path="/check-out" element={<Checkout />} />
-      <Route path="/blog" element={<Blog />} />
-      <Route path="/blog-details/:id" element={<BlogDetails />} />
+      <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/orders/:id/tracking" element={<OrderTracking />} />
+      <Route path="/profile" element={<Profile />} />
 
       {/* 404 - Route không tìm thấy */}
       <Route path="*" element={<Navigate to="/home" replace />} />

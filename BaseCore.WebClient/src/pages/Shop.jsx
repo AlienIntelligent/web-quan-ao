@@ -103,6 +103,11 @@ const Shop = () => {
     }
     return `/img/products/${raw}`;
   };
+  const formatMoney = (value) =>
+    Number(value || 0).toLocaleString("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
 
   return (
     <LayoutPublic>
@@ -203,7 +208,7 @@ const Shop = () => {
                         <div className="catagory-name">{item.category?.name || "Danh mục"}</div>
                         <h5>{item.name}</h5>
                         <div className="product-price">
-                          ${Number(item.price || 0).toFixed(2)}
+                          {formatMoney(item.price)}
                         </div>
                       </div>
                     </div>

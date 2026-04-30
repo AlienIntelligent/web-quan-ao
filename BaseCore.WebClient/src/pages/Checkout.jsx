@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
 import { cartStorage, couponStorage, orderApi, promotionApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+
 const Checkout = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     address: "",
-    country: "",
+    ward: "",
     city: "",
-    zipCode: "",
+    note: "",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState("credit-card");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [submitting, setSubmitting] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -26,7 +34,7 @@ const Checkout = () => {
 
   const cartItems = cartStorage.getItems();
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = cartItems.length ? 10 : 0;
+  const shipping = cartItems.length ? 30000 : 0;
   const discount = appliedCoupon?.discountAmount || 0;
   const total = Math.max(0, subtotal + shipping - discount);
 
@@ -64,10 +72,7 @@ const Checkout = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const applyCoupon = async (e) => {
@@ -125,10 +130,22 @@ const Checkout = () => {
       return;
     }
 
+    const shippingAddress = [
+      `${formData.firstName} ${formData.lastName}`.trim(),
+      formData.phone,
+      formData.address,
+      formData.ward,
+      formData.city,
+      formData.note ? `Ghi chú: ${formData.note}` : "",
+      `Thanh toán: ${paymentMethod === "cod" ? "Khi nhận hàng" : "Chuyển khoản"}`,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
     setSubmitting(true);
     try {
       await orderApi.create({
-        shippingAddress: formData.address,
+        shippingAddress,
         shippingFee: shipping,
         promotionCode: appliedCoupon?.code || null,
         items: currentCartItems.map((x) => ({
@@ -139,16 +156,7 @@ const Checkout = () => {
       cartStorage.clear();
       couponStorage.clear();
       alert("Đặt hàng thành công!");
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        address: "",
-        country: "",
-        city: "",
-        zipCode: "",
-      });
+      navigate("/my-orders");
     } catch (error) {
       alert(error.response?.data?.message || "Đặt hàng thất bại.");
     } finally {
@@ -158,7 +166,7 @@ const Checkout = () => {
 
   return (
     <LayoutPublic>
-      <section className="breadcrumb-section set-bg" data-setbg="/img/breadcrumb.jpg">
+      <section className="breadcrumb-section set-bg" style={{ backgroundImage: "url(/img/breadcrumb.jpg)" }}>
         <div className="container">
           <div className="row">
             <div className="col-lg-12 text-center">
@@ -173,91 +181,39 @@ const Checkout = () => {
           <form onSubmit={handleSubmit} className="checkout-form">
             <div className="row">
               <div className="col-lg-8">
-                <h4>Thông tin thanh toán</h4>
+                <h4>Thông tin nhận hàng</h4>
                 <div className="row">
                   <div className="col-lg-6">
                     <label htmlFor="firstName">Họ</label>
-                    <input
-                      type="text"
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      required
-                    />
+                    <input id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required />
                   </div>
                   <div className="col-lg-6">
                     <label htmlFor="lastName">Tên</label>
-                    <input
-                      type="text"
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-lg-12">
-                    <label htmlFor="email">Email</label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
+                    <input id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
                   </div>
                   <div className="col-lg-12">
                     <label htmlFor="phone">Số điện thoại</label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                    />
+                    <input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} required />
+                  </div>
+                  <div className="col-lg-12">
+                    <label htmlFor="email">Email</label>
+                    <input id="email" name="email" type="email" value={formData.email} onChange={handleChange} />
                   </div>
                   <div className="col-lg-12">
                     <label htmlFor="address">Địa chỉ</label>
-                    <input
-                      type="text"
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      required
-                    />
+                    <input id="address" name="address" value={formData.address} onChange={handleChange} required />
                   </div>
                   <div className="col-lg-6">
-                    <label htmlFor="country">Quốc gia</label>
-                    <input
-                      type="text"
-                      id="country"
-                      name="country"
-                      value={formData.country}
-                      onChange={handleChange}
-                    />
+                    <label htmlFor="ward">Phường/Xã</label>
+                    <input id="ward" name="ward" value={formData.ward} onChange={handleChange} />
                   </div>
                   <div className="col-lg-6">
-                    <label htmlFor="city">Thành phố</label>
-                    <input
-                      type="text"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                    />
+                    <label htmlFor="city">Tỉnh/Thành phố</label>
+                    <input id="city" name="city" value={formData.city} onChange={handleChange} required />
                   </div>
                   <div className="col-lg-12">
-                    <label htmlFor="zipCode">Mã bưu chính</label>
-                    <input
-                      type="text"
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleChange}
-                    />
+                    <label htmlFor="note">Ghi chú giao hàng</label>
+                    <input id="note" name="note" value={formData.note} onChange={handleChange} placeholder="Ví dụ: giao giờ hành chính" />
                   </div>
                 </div>
               </div>
@@ -270,23 +226,13 @@ const Checkout = () => {
                       {cartItems.map((item) => (
                         <li key={item.productId} className="fw-normal">
                           {item.name} x {item.quantity}
-                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          <span>{formatMoney(item.price * item.quantity)}</span>
                         </li>
                       ))}
-                      <li className="fw-normal">
-                        Tạm tính <span>${subtotal.toFixed(2)}</span>
-                      </li>
-                      <li className="fw-normal">
-                        Vận chuyển <span>${shipping.toFixed(2)}</span>
-                      </li>
-                      {appliedCoupon && (
-                        <li className="fw-normal">
-                          Giảm giá <span>-${discount.toFixed(2)}</span>
-                        </li>
-                      )}
-                      <li className="total-price">
-                        Tổng cộng <span>${total.toFixed(2)}</span>
-                      </li>
+                      <li className="fw-normal">Tạm tính <span>{formatMoney(subtotal)}</span></li>
+                      <li className="fw-normal">Vận chuyển <span>{formatMoney(shipping)}</span></li>
+                      {appliedCoupon && <li className="fw-normal">Giảm giá <span>-{formatMoney(discount)}</span></li>}
+                      <li className="total-price">Tổng cộng <span>{formatMoney(total)}</span></li>
                     </ul>
                     <div className="discount-coupon mb-4">
                       <h6>Mã giảm giá</h6>
@@ -314,26 +260,26 @@ const Checkout = () => {
                     </div>
                     <div className="payment-check">
                       <div className="pc-item">
-                        <label htmlFor="pm-card">
-                          Thẻ tín dụng
+                        <label htmlFor="pm-cod">
+                          Thanh toán khi nhận hàng
                           <input
-                            id="pm-card"
+                            id="pm-cod"
                             type="radio"
-                            value="credit-card"
-                            checked={paymentMethod === "credit-card"}
+                            value="cod"
+                            checked={paymentMethod === "cod"}
                             onChange={(e) => setPaymentMethod(e.target.value)}
                           />
                           <span className="checkmark"></span>
                         </label>
                       </div>
                       <div className="pc-item">
-                        <label htmlFor="pm-paypal">
-                          Paypal
+                        <label htmlFor="pm-bank">
+                          Chuyển khoản ngân hàng
                           <input
-                            id="pm-paypal"
+                            id="pm-bank"
                             type="radio"
-                            value="paypal"
-                            checked={paymentMethod === "paypal"}
+                            value="bank-transfer"
+                            checked={paymentMethod === "bank-transfer"}
                             onChange={(e) => setPaymentMethod(e.target.value)}
                           />
                           <span className="checkmark"></span>

@@ -3,14 +3,18 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { cartStorage, categoryApi } from "../services/api";
 
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+
 const Header = () => {
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
   const [categories, setCategories] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchCategoryId, setSearchCategoryId] = useState("");
-  const [searchMinPrice, setSearchMinPrice] = useState("");
-  const [searchMaxPrice, setSearchMaxPrice] = useState("");
   const { isAuthenticated, logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,8 +30,6 @@ const Header = () => {
     const params = new URLSearchParams(location.search);
     setSearchKeyword(params.get("keyword") || "");
     setSearchCategoryId(params.get("categoryId") || "");
-    setSearchMinPrice(params.get("minPrice") || "");
-    setSearchMaxPrice(params.get("maxPrice") || "");
   }, [location.search]);
 
   useEffect(() => {
@@ -54,16 +56,11 @@ const Header = () => {
 
   const handleProductSearch = (e) => {
     e.preventDefault();
-
     const params = new URLSearchParams();
     const keyword = searchKeyword.trim();
-    const minPrice = searchMinPrice.trim();
-    const maxPrice = searchMaxPrice.trim();
 
     if (keyword) params.set("keyword", keyword);
     if (searchCategoryId) params.set("categoryId", searchCategoryId);
-    if (minPrice) params.set("minPrice", minPrice);
-    if (maxPrice) params.set("maxPrice", maxPrice);
 
     navigate({
       pathname: "/shop",
@@ -71,313 +68,163 @@ const Header = () => {
     });
   };
 
+  const navClass = (path) => (location.pathname === path ? "active" : "");
+
   return (
-    <>
-      {/* Header Section Begin */}
-      <header className="header-section">
-        {/* Header Top */}
-        <div className="header-top">
-          <div className="container">
-            <div className="row">
-              <div className="col-lg-6 col-md-6">
-                <div className="ht-left">
-                  <div className="mail-service">
-                    <i className="fa fa-envelope"></i>
-                    hello.colorlib@gmail.com
-                  </div>
-                  <div className="phone-service">
-                    <i className="fa fa-phone"></i>
-                    +65 11.188.888
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-6 col-md-6">
-                <div className="ht-right">
-                  {isAuthenticated ? (
-                    <div className="login-panel">
-                      <a href="#" title={user?.username || "Người dùng"}>
-                        <i className="fa fa-user"></i>
-                        {user?.username || "Tài khoản"}
-                      </a>
-                      {isAdmin() && (
-                        <Link
-                          to="/dashboard"
-                          style={{ marginLeft: "10px" }}
-                          title="Trang quản trị"
-                        >
-                          <i className="fa fa-cogs"></i>
-                        </Link>
-                      )}
-                      <a
-                        href="#"
-                        onClick={handleLogout}
-                        style={{ marginLeft: "10px" }}
-                        title="Đăng xuất"
-                      >
-                        <i className="fa fa-sign-out"></i>
-                      </a>
-                    </div>
-                  ) : (
-                    <Link to="/login" className="login-panel">
-                      <i className="fa fa-user"></i>
-                      Đăng nhập
-                    </Link>
-                  )}
-                  <div className="lan-selector">
-                    <select
-                      className="language_drop"
-                      name="countries"
-                      id="countries"
-                    >
-                      <option value="yt">Tiếng Việt</option>
-                      <option value="yu">English</option>
-                    </select>
-                  </div>
-                  <div className="top-social">
-                    <a href="#">
-                      <i className="ti-facebook"></i>
-                    </a>
-                    <a href="#">
-                      <i className="ti-twitter-alt"></i>
-                    </a>
-                    <a href="#">
-                      <i className="ti-linkedin"></i>
-                    </a>
-                    <a href="#">
-                      <i className="ti-pinterest"></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Inner Header */}
+    <header className="header-section">
+      <div className="header-top">
         <div className="container">
-          <div className="inner-header">
-            <div className="row">
-              <div className="col-lg-2 col-md-2">
-                <div className="logo">
-                  <Link to="/">
-                    <img src="/img/logo.png" alt="Logo" />
-                  </Link>
+          <div className="row">
+            <div className="col-lg-6 col-md-6">
+              <div className="ht-left">
+                <div className="mail-service">
+                  <i className="fa fa-envelope"></i>
+                  support@fashion-shop.vn
+                </div>
+                <div className="phone-service">
+                  <i className="fa fa-phone"></i>
+                  1900 6868
                 </div>
               </div>
-              <div className="col-lg-7 col-md-7">
-                <form className="advanced-search product-search-form" onSubmit={handleProductSearch}>
-                  <select
-                    className="category-btn"
-                    value={searchCategoryId}
-                    onChange={(e) => setSearchCategoryId(e.target.value)}
-                    aria-label="Danh mục sản phẩm"
-                  >
-                    <option value="">Tất cả danh mục</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="input-group">
-                    <input
-                      type="text"
-                      className="keyword-input"
-                      placeholder="Bạn cần tìm gì?"
-                      value={searchKeyword}
-                      onChange={(e) => setSearchKeyword(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      className="price-input"
-                      min="0"
-                      placeholder="Giá từ"
-                      value={searchMinPrice}
-                      onChange={(e) => setSearchMinPrice(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      className="price-input"
-                      min="0"
-                      placeholder="Giá đến"
-                      value={searchMaxPrice}
-                      onChange={(e) => setSearchMaxPrice(e.target.value)}
-                    />
-                    <button type="submit">
-                      <i className="ti-search"></i>
-                    </button>
-                  </div>
-                </form>
-              </div>
-              <div className="col-lg-3 text-right col-md-3">
-                <ul className="nav-right">
-                  <li className="heart-icon">
-                    <a href="#">
-                      <i className="icon_heart_alt"></i>
-                      <span>1</span>
-                    </a>
-                  </li>
-                  <li className="cart-icon">
-                    <Link to="/shopping-cart">
-                      <i className="icon_bag_alt"></i>
-                      <span>{cartCount}</span>
+            </div>
+            <div className="col-lg-6 col-md-6">
+              <div className="ht-right">
+                {isAuthenticated ? (
+                  <div className="login-panel">
+                    <Link to="/profile" title="Tài khoản">
+                      <i className="fa fa-user"></i>
+                      {user?.username || user?.userName || "Tài khoản"}
                     </Link>
-                    <div className="cart-hover">
-                      <div className="select-items">
-                        <table>
-                          <tbody>
-                            <tr>
-                              <td className="si-pic">
-                                <img src="/img/select-product-1.jpg" alt="" />
-                              </td>
-                              <td className="si-text">
-                                <div className="product-selected">
-                                  <p>$60.00 x 1</p>
-                                  <h6>Kabino Bedside Table</h6>
-                                </div>
-                              </td>
-                              <td className="si-close">
-                                <i className="ti-close"></i>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="si-pic">
-                                <img src="/img/select-product-2.jpg" alt="" />
-                              </td>
-                              <td className="si-text">
-                                <div className="product-selected">
-                                  <p>$60.00 x 1</p>
-                                  <h6>Kabino Bedside Table</h6>
-                                </div>
-                              </td>
-                              <td className="si-close">
-                                <i className="ti-close"></i>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="select-total">
-                        <span>Tổng:</span>
-                        <h5>${cartTotal.toFixed(2)}</h5>
-                      </div>
-                      <div className="select-button">
-                        <Link
-                          to="/shopping-cart"
-                          className="primary-btn view-card"
-                        >
-                          XEM GIỎ HÀNG
-                        </Link>
-                        <Link
-                          to="/check-out"
-                          className="primary-btn checkout-btn"
-                        >
-                          THANH TOÁN
-                        </Link>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="cart-price">${cartTotal.toFixed(2)}</li>
-                </ul>
+                    <Link to="/my-orders" style={{ marginLeft: 10 }} title="Đơn mua">
+                      <i className="fa fa-list-alt"></i>
+                    </Link>
+                    {isAdmin() && (
+                      <Link to="/dashboard" style={{ marginLeft: 10 }} title="Trang quản trị">
+                        <i className="fa fa-cogs"></i>
+                      </Link>
+                    )}
+                    <a href="#" onClick={handleLogout} style={{ marginLeft: 10 }} title="Đăng xuất">
+                      <i className="fa fa-sign-out"></i>
+                    </a>
+                  </div>
+                ) : (
+                  <Link to="/login" className="login-panel">
+                    <i className="fa fa-user"></i>
+                    Đăng nhập
+                  </Link>
+                )}
+                <div className="top-link">
+                  <Link to="/my-orders">Theo dõi đơn hàng</Link>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <div className="nav-item">
-          <div className="container">
-            <div className="nav-depart">
-              <div className="depart-btn">
-                <i className="ti-menu"></i>
-                <span>Tất cả ngành hàng</span>
-                <ul className="depart-hover">
-                  <li className="active">
-                    <a href="#">Thời trang nữ</a>
-                  </li>
-                  <li>
-                    <a href="#">Thời trang nam</a>
-                  </li>
-                  <li>
-                    <a href="#">Đồ lót</a>
-                  </li>
-                  <li>
-                    <a href="#">Thời trang trẻ em</a>
-                  </li>
-                  <li>
-                    <a href="#">Thương hiệu thời trang</a>
-                  </li>
-                  <li>
-                    <a href="#">Phụ kiện/Giày dép</a>
-                  </li>
-                  <li>
-                    <a href="#">Thương hiệu cao cấp</a>
-                  </li>
-                  <li>
-                    <a href="#">Trang phục ngoài trời</a>
-                  </li>
-                </ul>
+      <div className="container">
+        <div className="inner-header">
+          <div className="row">
+            <div className="col-lg-2 col-md-2">
+              <div className="logo">
+                <Link to="/">
+                  <img src="/img/logo.png" alt="Fashion Shop" />
+                </Link>
               </div>
             </div>
-            <nav className="nav-menu mobile-menu">
-              <ul>
-                <li className={location.pathname === "/home" ? "active" : ""}>
-                  <Link to="/home">Trang chủ</Link>
+            <div className="col-lg-7 col-md-7">
+              <form className="advanced-search product-search-form" onSubmit={handleProductSearch}>
+                <select
+                  className="category-btn"
+                  value={searchCategoryId}
+                  onChange={(e) => setSearchCategoryId(e.target.value)}
+                  aria-label="Danh mục sản phẩm"
+                >
+                  <option value="">Tất cả thời trang</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="input-group">
+                  <input
+                    type="text"
+                    className="keyword-input"
+                    placeholder="Tìm áo thun, váy, quần jean..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                  />
+                  <button type="submit" aria-label="Tìm kiếm">
+                    <i className="ti-search"></i>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div className="col-lg-3 text-right col-md-3">
+              <ul className="nav-right">
+                <li className="order-icon">
+                  <Link to="/my-orders" title="Đơn mua">
+                    <i className="fa fa-list-alt"></i>
+                  </Link>
                 </li>
-                <li className={location.pathname === "/shop" ? "active" : ""}>
-                  <Link to="/shop">Cửa hàng</Link>
+                <li className="cart-icon">
+                  <Link to="/shopping-cart" title="Giỏ hàng">
+                    <i className="icon_bag_alt"></i>
+                    <span>{cartCount}</span>
+                  </Link>
+                  <div className="cart-hover">
+                    <div className="select-total">
+                      <span>Tạm tính:</span>
+                      <h5>{formatMoney(cartTotal)}</h5>
+                    </div>
+                    <div className="select-button">
+                      <Link to="/shopping-cart" className="primary-btn view-card">
+                        Xem giỏ hàng
+                      </Link>
+                      <Link to="/check-out" className="primary-btn checkout-btn">
+                        Thanh toán
+                      </Link>
+                    </div>
+                  </div>
                 </li>
-                <li>
-                  <a href="#">Bộ sưu tập</a>
-                  <ul className="dropdown">
-                    <li>
-                      <a href="#">Nam</a>
-                    </li>
-                    <li>
-                      <a href="#">Nu</a>
-                    </li>
-                    <li>
-                      <a href="#">Tre em</a>
-                    </li>
-                  </ul>
-                </li>
-                <li className={location.pathname === "/blog" ? "active" : ""}>
-                  <Link to="/blog">Tin tức</Link>
-                </li>
-                <li className={location.pathname === "/contact" ? "active" : ""}>
-                  <Link to="/contact">Liên hệ</Link>
-                </li>
-                <li>
-                  <a href="#">Trang phụ</a>
-                  <ul className="dropdown">
-                    <li>
-                      <Link to="/blog-details">Chi tiết bài viết</Link>
-                    </li>
-                    <li>
-                      <Link to="/shopping-cart">Giỏ hàng</Link>
-                    </li>
-                    <li>
-                      <Link to="/check-out">Thanh toán</Link>
-                    </li>
-                    <li>
-                      <a href="#">Câu hỏi thường gặp</a>
-                    </li>
-                    <li>
-                      <Link to="/register">Đăng ký</Link>
-                    </li>
-                    <li>
-                      <Link to="/login">Đăng nhập</Link>
-                    </li>
-                  </ul>
-                </li>
+                <li className="cart-price">{formatMoney(cartTotal)}</li>
               </ul>
-            </nav>
-            <div id="mobile-menu-wrap"></div>
+            </div>
           </div>
         </div>
-      </header>
-      {/* Header End */}
-    </>
+      </div>
+
+      <div className="nav-item">
+        <div className="container">
+          <div className="nav-depart">
+            <div className="depart-btn">
+              <i className="ti-menu"></i>
+              <span>Danh mục thời trang</span>
+              <ul className="depart-hover">
+                <li><Link to="/shop?keyword=áo">Áo</Link></li>
+                <li><Link to="/shop?keyword=quần">Quần</Link></li>
+                <li><Link to="/shop?keyword=váy">Váy</Link></li>
+                <li><Link to="/shop?keyword=nam">Thời trang nam</Link></li>
+                <li><Link to="/shop?keyword=nữ">Thời trang nữ</Link></li>
+                <li><Link to="/shop?keyword=trẻ em">Thời trang trẻ em</Link></li>
+                <li><Link to="/shop?keyword=phụ kiện">Phụ kiện</Link></li>
+              </ul>
+            </div>
+          </div>
+          <nav className="nav-menu mobile-menu">
+            <ul>
+              <li className={navClass("/home")}><Link to="/home">Trang chủ</Link></li>
+              <li className={navClass("/shop")}><Link to="/shop">Sản phẩm</Link></li>
+              <li className={navClass("/my-orders")}><Link to="/my-orders">Đơn mua</Link></li>
+              <li className={navClass("/shopping-cart")}><Link to="/shopping-cart">Giỏ hàng</Link></li>
+              <li className={navClass("/profile")}><Link to="/profile">Tài khoản</Link></li>
+            </ul>
+          </nav>
+          <div id="mobile-menu-wrap"></div>
+        </div>
+      </div>
+    </header>
   );
 };
 

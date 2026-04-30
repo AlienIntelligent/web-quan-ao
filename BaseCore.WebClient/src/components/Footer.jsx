@@ -5,113 +5,69 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <>
-      {/* Footer Section Begin */}
-      <footer className="footer-section">
+    <footer className="footer-section">
+      <div className="container">
+        <div className="row">
+          <div className="col-lg-4">
+            <div className="footer-left">
+              <div className="footer-logo">
+                <Link to="/">
+                  <img src="/img/footer-logo.png" alt="Fashion Shop" />
+                </Link>
+              </div>
+              <ul>
+                <li>Địa chỉ: 12 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh</li>
+                <li>Điện thoại: 1900 6868</li>
+                <li>Email: support@fashion-shop.vn</li>
+              </ul>
+            </div>
+          </div>
+          <div className="col-lg-2 offset-lg-1">
+            <div className="footer-widget">
+              <h5>Mua sắm</h5>
+              <ul>
+                <li><Link to="/shop">Tất cả sản phẩm</Link></li>
+                <li><Link to="/shopping-cart">Giỏ hàng</Link></li>
+                <li><Link to="/check-out">Thanh toán</Link></li>
+                <li><Link to="/my-orders">Theo dõi đơn</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="col-lg-2">
+            <div className="footer-widget">
+              <h5>Tài khoản</h5>
+              <ul>
+                <li><Link to="/profile">Hồ sơ</Link></li>
+                <li><Link to="/my-orders">Đơn mua</Link></li>
+                <li><Link to="/login">Đăng nhập</Link></li>
+                <li><Link to="/register">Đăng ký</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="col-lg-3">
+            <div className="newslatter-item">
+              <h5>Ưu đãi thời trang</h5>
+              <p>Nhận thông báo về bộ sưu tập mới, mã giảm giá và lịch giao hàng.</p>
+              <form action="#" className="subscribe-form">
+                <input type="email" placeholder="Email của bạn" />
+                <button type="button">Đăng ký</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="copyright-reserved">
         <div className="container">
           <div className="row">
-            <div className="col-lg-3">
-              <div className="footer-left">
-                <div className="footer-logo">
-                  <a href="/">
-                    <img src="/img/footer-logo.png" alt="Logo" />
-                  </a>
-                </div>
-                <ul>
-                  <li>Địa chỉ: 60-49 Road 11378 New York</li>
-                  <li>Điện thoại: +65 11.188.888</li>
-                  <li>Email: hello.colorlib@gmail.com</li>
-                </ul>
-                <div className="footer-social">
-                  <a href="#">
-                    <i className="fa fa-facebook"></i>
-                  </a>
-                  <a href="#">
-                    <i className="fa fa-instagram"></i>
-                  </a>
-                  <a href="#">
-                    <i className="fa fa-twitter"></i>
-                  </a>
-                  <a href="#">
-                    <i className="fa fa-pinterest"></i>
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-2 offset-lg-1">
-              <div className="footer-widget">
-                <h5>Thông tin</h5>
-                <ul>
-                  <li>
-                    <a href="#">Về chúng tôi</a>
-                  </li>
-                  <li>
-                    <Link to="/check-out">Thanh toán</Link>
-                  </li>
-                  <li>
-                    <Link to="/contact">Liên hệ</Link>
-                  </li>
-                  <li>
-                    <a href="#">Dịch vụ</a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="col-lg-2">
-              <div className="footer-widget">
-                <h5>Tài khoản của tôi</h5>
-                <ul>
-                  <li>
-                    <a href="#">Tài khoản của tôi</a>
-                  </li>
-                  <li>
-                    <Link to="/contact">Liên hệ</Link>
-                  </li>
-                  <li>
-                    <Link to="/shopping-cart">Giỏ hàng</Link>
-                  </li>
-                  <li>
-                    <Link to="/shop">Cửa hàng</Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="col-lg-4">
-              <div className="newslatter-item">
-                <h5>Đăng ký nhận tin khuyến mãi</h5>
-                <p>
-                  Nhận email cập nhật sản phẩm mới và ưu đãi đặc biệt.
-                </p>
-                <form action="#" className="subscribe-form">
-                  <input type="text" placeholder="Nhập email của bạn" />
-                  <button type="button">Đăng ký</button>
-                </form>
+            <div className="col-lg-12">
+              <div className="copyright-text">
+                Bản quyền &copy;{currentYear} Fashion Shop. Giao diện phục vụ nghiệp vụ bán quần áo.
               </div>
             </div>
           </div>
         </div>
-        <div className="copyright-reserved">
-          <div className="container">
-            <div className="row">
-              <div className="col-lg-12">
-                <div className="copyright-text">
-                  Bản quyền &copy;{currentYear} Bảo lưu mọi quyền | Mẫu giao diện này được thiết kế với{" "}
-                  <i className="fa fa-heart-o" aria-hidden="true"></i> by{" "}
-                  <a
-                    href="https://colorlib.com"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Colorlib
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-      {/* Footer Section End */}
-    </>
+      </div>
+    </footer>
   );
 };
 

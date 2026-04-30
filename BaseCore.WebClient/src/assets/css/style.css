@@ -3925,6 +3925,302 @@ ol {
 	color: #6B6B6B;
 }
 
+/*---------------------
+  Customer Account
+-----------------------*/
+
+.header-top .ht-right .top-link {
+	float: right;
+	padding: 15px 20px 15px 0;
+}
+
+.header-top .ht-right .top-link a {
+	color: #252525;
+	font-size: 14px;
+}
+
+.inner-header .nav-right li.order-icon a {
+	color: #252525;
+	display: inline-block;
+}
+
+.customer-section {
+	background: #f5f5f5;
+}
+
+.customer-empty,
+.profile-panel,
+.order-card,
+.tracking-summary {
+	background: #ffffff;
+	border: 1px solid #eeeeee;
+	padding: 28px;
+}
+
+.customer-empty {
+	text-align: center;
+}
+
+.customer-empty h4 {
+	font-weight: 700;
+	margin-bottom: 10px;
+}
+
+.order-tabs {
+	background: #ffffff;
+	border: 1px solid #eeeeee;
+	display: flex;
+	flex-wrap: wrap;
+	margin-bottom: 18px;
+}
+
+.order-tabs button {
+	background: transparent;
+	border: 0;
+	border-bottom: 3px solid transparent;
+	color: #252525;
+	cursor: pointer;
+	flex: 1 1 140px;
+	font-size: 15px;
+	padding: 16px 10px;
+}
+
+.order-tabs button.active {
+	border-color: #e7ab3c;
+	color: #e7ab3c;
+	font-weight: 700;
+}
+
+.order-list {
+	display: grid;
+	gap: 16px;
+}
+
+.order-card-header {
+	align-items: center;
+	border-bottom: 1px solid #eeeeee;
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 16px;
+	padding-bottom: 14px;
+}
+
+.order-card-header strong {
+	color: #252525;
+	font-size: 18px;
+}
+
+.order-card-header span {
+	color: #777777;
+	display: block;
+	font-size: 14px;
+	margin-top: 4px;
+}
+
+.order-status {
+	color: #e7ab3c;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.order-card-body p {
+	color: #555555;
+	margin-bottom: 8px;
+}
+
+.order-card-body i {
+	color: #e7ab3c;
+	margin-right: 8px;
+	width: 16px;
+}
+
+.order-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 18px;
+}
+
+.outline-btn {
+	background: #ffffff;
+	border: 1px solid #252525;
+	color: #252525;
+	cursor: pointer;
+	display: inline-block;
+	font-size: 14px;
+	font-weight: 700;
+	padding: 11px 24px;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+.outline-btn:hover,
+.outline-btn:focus {
+	background: #252525;
+	color: #ffffff;
+}
+
+.full-width {
+	width: 100%;
+}
+
+.tracking-summary {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin-bottom: 18px;
+}
+
+.tracking-summary span {
+	color: #777777;
+	font-size: 14px;
+}
+
+.tracking-summary h4 {
+	font-weight: 700;
+	margin-top: 6px;
+}
+
+.tracking-steps {
+	background: #ffffff;
+	border: 1px solid #eeeeee;
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	margin-bottom: 24px;
+	padding: 26px 18px;
+}
+
+.tracking-step {
+	color: #999999;
+	position: relative;
+	text-align: center;
+}
+
+.tracking-step:before {
+	background: #dddddd;
+	content: "";
+	height: 3px;
+	left: -50%;
+	position: absolute;
+	top: 20px;
+	width: 100%;
+}
+
+.tracking-step:first-child:before {
+	display: none;
+}
+
+.tracking-step.done {
+	color: #252525;
+	font-weight: 700;
+}
+
+.tracking-step.done:before {
+	background: #e7ab3c;
+}
+
+.tracking-icon {
+	align-items: center;
+	background: #eeeeee;
+	border-radius: 50%;
+	display: inline-flex;
+	height: 42px;
+	justify-content: center;
+	margin-bottom: 10px;
+	position: relative;
+	width: 42px;
+	z-index: 1;
+}
+
+.tracking-step.done .tracking-icon {
+	background: #e7ab3c;
+	color: #ffffff;
+}
+
+.tracking-items {
+	display: grid;
+	gap: 14px;
+}
+
+.tracking-item {
+	align-items: center;
+	border-bottom: 1px solid #eeeeee;
+	display: grid;
+	gap: 14px;
+	grid-template-columns: 72px 1fr auto;
+	padding-bottom: 14px;
+}
+
+.tracking-item:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+.tracking-item img {
+	border: 1px solid #eeeeee;
+	height: 72px;
+	object-fit: cover;
+	width: 72px;
+}
+
+.tracking-item h5 {
+	font-weight: 700;
+	margin-bottom: 5px;
+}
+
+.tracking-item span {
+	color: #777777;
+}
+
+.account-menu {
+	background: #ffffff;
+	border: 1px solid #eeeeee;
+}
+
+.account-menu a {
+	border-bottom: 1px solid #eeeeee;
+	color: #252525;
+	display: block;
+	padding: 16px 18px;
+}
+
+.account-menu a.active,
+.account-menu a:hover {
+	color: #e7ab3c;
+}
+
+.account-menu i {
+	margin-right: 8px;
+	width: 18px;
+}
+
+.profile-panel h4 {
+	font-weight: 700;
+	margin-bottom: 22px;
+}
+
+.profile-row {
+	border-bottom: 1px solid #eeeeee;
+	display: flex;
+	justify-content: space-between;
+	padding: 14px 0;
+}
+
+.profile-row span {
+	color: #777777;
+}
+
+.profile-note {
+	background: #fff8ec;
+	color: #5f4b20;
+	margin-top: 18px;
+	padding: 14px 16px;
+}
+
+.profile-note i {
+	margin-right: 8px;
+}
+
 /* ------------------------------ Responsive Media Styles ---------------------------- */
 
 @media only screen and (min-width: 1200px) and (max-width: 1920px) {

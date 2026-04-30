@@ -26,9 +26,14 @@ const ShoppingCart = () => {
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems],
   );
-  const shipping = cartItems.length ? 10 : 0;
+  const shipping = cartItems.length ? 30000 : 0;
   const discount = appliedCoupon?.discountAmount || 0;
   const total = Math.max(0, subtotal + shipping - discount);
+  const formatMoney = (value) =>
+    Number(value || 0).toLocaleString("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
 
   useEffect(() => {
     const savedCoupon = couponStorage.get();
@@ -151,7 +156,7 @@ const ShoppingCart = () => {
                             <h4>{item.name}</h4>
                           </div>
                         </td>
-                        <td className="p-price first-row">${item.price.toFixed(2)}</td>
+                        <td className="p-price first-row">{formatMoney(item.price)}</td>
                         <td className="qua-col first-row">
                           <div className="quantity">
                             <div className="pro-qty">
@@ -180,7 +185,7 @@ const ShoppingCart = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="total-price first-row">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="total-price first-row">{formatMoney(item.price * item.quantity)}</td>
                         <td className="close-td first-row">
                           <a href="#" onClick={(e) => { e.preventDefault(); removeItem(item.productId); }}>
                             <i className="ti-close"></i>
@@ -204,9 +209,9 @@ const ShoppingCart = () => {
                     <Link to="/shop" className="primary-btn continue-shop">
                       Tiếp tục mua sắm
                     </Link>
-                    <a href="#" className="primary-btn up-cart" onClick={(e) => e.preventDefault()}>
-                      Cập nhật giỏ hàng
-                    </a>
+                    <Link to="/my-orders" className="primary-btn up-cart">
+                      Theo dõi đơn hàng
+                    </Link>
                   </div>
                 </div>
                 <div className="col-lg-6">
@@ -239,18 +244,18 @@ const ShoppingCart = () => {
                   <div className="proceed-checkout">
                     <ul>
                       <li className="subtotal">
-                        Tạm tính <span>${subtotal.toFixed(2)}</span>
+                        Tạm tính <span>{formatMoney(subtotal)}</span>
                       </li>
                       <li className="subtotal">
-                        Vận chuyển <span>${shipping.toFixed(2)}</span>
+                        Vận chuyển <span>{formatMoney(shipping)}</span>
                       </li>
                       {appliedCoupon && (
                         <li className="subtotal">
-                          Giảm giá <span>-${discount.toFixed(2)}</span>
+                          Giảm giá <span>-{formatMoney(discount)}</span>
                         </li>
                       )}
                       <li className="cart-total">
-                        Tổng cộng <span>${total.toFixed(2)}</span>
+                        Tổng cộng <span>{formatMoney(total)}</span>
                       </li>
                     </ul>
                     <Link to="/check-out" className="proceed-btn">
