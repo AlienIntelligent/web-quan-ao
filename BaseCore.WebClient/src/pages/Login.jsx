@@ -36,15 +36,6 @@ const Login = () => {
 
   return (
     <LayoutPublic>
-      <section className="breadcrumb-section set-bg" data-setbg="/img/breadcrumb.jpg">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-12 text-center">
-              <h2>Đăng nhập</h2>
-            </div>
-          </div>
-        </div>
-      </section>
       <div className="register-login-section spad">
         <div className="container">
           <div className="row">

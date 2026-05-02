@@ -35,6 +35,8 @@ namespace BaseCore.Repository.EFCore
         public async Task<Order?> GetWithDetailsAsync(int orderId)
         {
             return await _dbSet
+                .Include(o => o.OrderDetailOrders)
+                .ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
         }
 

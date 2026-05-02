@@ -6,9 +6,11 @@ const ORDER_STATUSES = [
   { value: "DANG_VAN_CHUYEN", label: "Shipping" },
   { value: "DA_VAN_CHUYEN", label: "Delivered" },
   { value: "HUY", label: "Cancelled" },
+  { value: "CHO_DUYET_HUY", label: "Request Cancel" },
 ];
 
 const getOrderStatusLabel = (value) => {
+  if (value === "CHO_DUYET_HUY") return "Chờ duyệt hủy";
   return ORDER_STATUSES.find((x) => x.value === value)?.label || value;
 };
 
@@ -52,9 +54,20 @@ const OrdersAdmin = () => {
   };
 
   const changeStatus = async (orderId, nextStatus) => {
-    await orderApi.updateStatus(orderId, nextStatus);
-    alert("Cap nhat trang thai thanh cong");
-    await loadOrders();
+    const isCancel = nextStatus === "HUY";
+    if (isCancel) {
+      if (!window.confirm("Xác nhận duyệt hủy đơn hàng này? Tồn kho sẽ được hoàn lại.")) {
+        return;
+      }
+    }
+
+    try {
+      await orderApi.updateStatus(orderId, nextStatus);
+      alert("Cập nhật trạng thái thành công");
+      await loadOrders();
+    } catch (error) {
+      alert(error.response?.data?.message || "Lỗi cập nhật trạng thái");
+    }
   };
 
   return (
@@ -71,7 +84,7 @@ const OrdersAdmin = () => {
               <form onSubmit={handleSearch} className="form-inline">
                 <input
                   className="form-control mr-2"
-                  placeholder="Ma don / UserId"
+                  placeholder="Mã đơn / UserId"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                 />
@@ -80,7 +93,7 @@ const OrdersAdmin = () => {
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
-                  <option value="">Tat ca trang thai</option>
+                  <option value="">Tất cả trạng thái</option>
                   {ORDER_STATUSES.map((x) => (
                     <option key={x.value} value={x.value}>
                       {x.label}
@@ -94,24 +107,24 @@ const OrdersAdmin = () => {
                   onChange={(e) => setFromDate(e.target.value)}
                 />
                 <button className="btn btn-primary" type="submit">
-                  Search
+                  Tìm kiếm
                 </button>
               </form>
             </div>
             <div className="card-body">
               {loading ? (
-                <div>Loading...</div>
+                <div>Đang tải...</div>
               ) : (
                 <>
                   <table className="table table-bordered table-striped">
                     <thead>
                       <tr>
                         <th>ID</th>
-                        <th>User</th>
-                        <th>Date</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th>Khách hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -121,7 +134,13 @@ const OrdersAdmin = () => {
                           <td>{order.userId}</td>
                           <td>{new Date(order.orderDate).toLocaleString()}</td>
                           <td>{order.totalAmount?.toLocaleString()} VND</td>
-                          <td>{getOrderStatusLabel(order.status)}</td>
+                          <td>
+                            {order.status === "CHO_DUYET_HUY" ? (
+                              <span className="badge badge-warning">Yêu cầu hủy</span>
+                            ) : (
+                              getOrderStatusLabel(order.status)
+                            )}
+                          </td>
                           <td>
                             <select
                               className="form-control form-control-sm"

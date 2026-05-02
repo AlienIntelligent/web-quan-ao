@@ -5,6 +5,7 @@ using BaseCore.Services.Authen;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace BaseCore.AuthService.Controllers
 {
@@ -125,36 +126,52 @@ namespace BaseCore.AuthService.Controllers
         {
             if (request == null)
             {
-                return BadRequest(new { message = "Invalid request" });
+                return BadRequest(new { message = "Invalid request payload" });
             }
 
-            var existingUser = await _userService.GetById(id);
-            if (existingUser == null)
+            try
             {
-                return NotFound(new { message = "User not found" });
+                var existingUser = await _userService.GetById(id);
+                if (existingUser == null)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+
+                // Log the update attempt for debugging
+                System.Console.WriteLine($"Updating user {id}: IsActive={request.IsActive}");
+
+                existingUser.Name = request.Name ?? existingUser.Name;
+                existingUser.Email = request.Email ?? existingUser.Email;
+                existingUser.Phone = request.Phone ?? existingUser.Phone;
+                existingUser.Position = request.Position ?? existingUser.Position;
+                
+                if (request.UserType.HasValue)
+                    existingUser.UserType = request.UserType.Value;
+                
+                if (request.IsActive.HasValue)
+                    existingUser.IsActive = request.IsActive.Value;
+
+                await _userService.Update(existingUser, request.Password);
+
+                return Ok(new UserResponse
+                {
+                    Id = existingUser.Id,
+                    Username = existingUser.UserName,
+                    Name = existingUser.Name,
+                    Email = existingUser.Email,
+                    Phone = existingUser.Phone,
+                    Position = existingUser.Position,
+                    IsActive = existingUser.IsActive,
+                    UserType = existingUser.UserType,
+                    Created = existingUser.Created
+                });
             }
-
-            existingUser.Name = request.Name ?? existingUser.Name;
-            existingUser.Email = request.Email ?? existingUser.Email;
-            existingUser.Phone = request.Phone ?? existingUser.Phone;
-            existingUser.Position = request.Position ?? existingUser.Position;
-            existingUser.UserType = request.UserType ?? existingUser.UserType;
-            existingUser.IsActive = request.IsActive ?? existingUser.IsActive;
-
-            await _userService.Update(existingUser, request.Password);
-
-            return Ok(new UserResponse
+            catch (Exception ex)
             {
-                Id = existingUser.Id,
-                Username = existingUser.UserName,
-                Name = existingUser.Name,
-                Email = existingUser.Email,
-                Phone = existingUser.Phone,
-                Position = existingUser.Position,
-                IsActive = existingUser.IsActive,
-                UserType = existingUser.UserType,
-                Created = existingUser.Created
-            });
+                System.Console.WriteLine($"Update user exception: {ex}");
+                var inner = ex.InnerException != null ? ex.InnerException.Message : "None";
+                return BadRequest(new { message = $"Failed to update user: {ex.Message}. Inner: {inner}" });
+            }
         }
 
         [HttpDelete("{id}")]
@@ -174,36 +191,79 @@ namespace BaseCore.AuthService.Controllers
 
     public class UserResponse
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; }
+        
+        [JsonPropertyName("username")]
         public string Username { get; set; }
+        
+        [JsonPropertyName("name")]
         public string Name { get; set; }
+        
+        [JsonPropertyName("email")]
         public string Email { get; set; }
+        
+        [JsonPropertyName("phone")]
         public string Phone { get; set; }
+        
+        [JsonPropertyName("position")]
         public string Position { get; set; }
+        
+        [JsonPropertyName("isActive")]
         public bool IsActive { get; set; }
+        
+        [JsonPropertyName("userType")]
         public int UserType { get; set; }
+        
+        [JsonPropertyName("created")]
         public DateTime Created { get; set; }
     }
 
     public class CreateUserRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
-        public string Position { get; set; }
+        [JsonPropertyName("username")]
+        public string? Username { get; set; }
+        
+        [JsonPropertyName("password")]
+        public string? Password { get; set; }
+        
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+        
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+        
+        [JsonPropertyName("phone")]
+        public string? Phone { get; set; }
+        
+        [JsonPropertyName("position")]
+        public string? Position { get; set; }
+        
+        [JsonPropertyName("userType")]
         public int UserType { get; set; }
     }
 
     public class UpdateUserRequest
     {
-        public string Password { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
-        public string Position { get; set; }
+        [JsonPropertyName("password")]
+        public string? Password { get; set; }
+        
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+        
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+        
+        [JsonPropertyName("phone")]
+        public string? Phone { get; set; }
+        
+        [JsonPropertyName("position")]
+        public string? Position { get; set; }
+        
+        [JsonPropertyName("userType")]
         public int? UserType { get; set; }
+        
+        [JsonPropertyName("isActive")]
         public bool? IsActive { get; set; }
     }
 }

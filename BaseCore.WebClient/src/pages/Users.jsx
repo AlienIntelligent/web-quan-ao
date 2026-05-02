@@ -140,7 +140,8 @@ const Users = () => {
             await userApi.update(user.id, { isActive: true });
             loadUsers();
         } catch (error) {
-            alert('Failed to approve user');
+            const message = error.response?.data?.message || 'Failed to approve user';
+            alert(message);
         }
     };
 

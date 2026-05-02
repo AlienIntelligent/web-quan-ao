@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
-import { cartStorage, couponStorage, orderApi, promotionApi } from "../services/api";
+import { cartStorage, couponStorage, orderApi, promotionApi, checkoutStorage } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { alertSuccess, alertError, confirmAction } from "../services/swal";
 
 const formatMoney = (value) =>
   Number(value || 0).toLocaleString("vi-VN", {
@@ -31,12 +32,42 @@ const Checkout = () => {
   const [couponMessage, setCouponMessage] = useState("");
   const [couponError, setCouponError] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [promotions, setPromotions] = useState([]);
+  const [cartItems, setCartItems] = useState([]);
 
-  const cartItems = cartStorage.getItems();
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  useEffect(() => {
+    // Ưu tiên lấy từ checkoutStorage (những món đã chọn từ giỏ)
+    const items = checkoutStorage.get();
+    if (items && items.length > 0) {
+      setCartItems(items);
+    } else {
+      // Fallback lấy toàn bộ giỏ (nếu vào trực tiếp trang checkout)
+      setCartItems(cartStorage.getItems());
+    }
+  }, []);
+  const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);
   const shipping = cartItems.length ? 30000 : 0;
   const discount = appliedCoupon?.discountAmount || 0;
   const total = Math.max(0, subtotal + shipping - discount);
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const response = await promotionApi.getAll({ pageSize: 100, isActive: true });
+        const list = response.data.items || response.data || [];
+        // Lọc mã còn hạn và còn lượt dùng
+        const activePromos = list.filter(p => {
+          const isExpired = p.endDate && new Date(p.endDate) < new Date();
+          const isLimitReached = p.usageLimit && p.usedCount >= p.usageLimit;
+          return !isExpired && !isLimitReached && p.isActive;
+        });
+        setPromotions(activePromos);
+      } catch (err) {
+        console.error("Không thể tải danh sách khuyến mãi", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
 
   useEffect(() => {
     const savedCoupon = couponStorage.get();
@@ -75,23 +106,16 @@ const Checkout = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const applyCoupon = async (e) => {
-    e.preventDefault();
-    const code = couponCode.trim();
-    setCouponMessage("");
-    setCouponError("");
-
-    if (!code) {
-      setCouponError("Vui lòng nhập mã giảm giá.");
-      return;
-    }
-
+  const handleApplyCode = async (code) => {
+    if (!code) return;
     if (!cartItems.length) {
       setCouponError("Giỏ hàng đang trống.");
       return;
     }
 
     setApplyingCoupon(true);
+    setCouponMessage("");
+    setCouponError("");
     try {
       const response = await promotionApi.validate({
         code,
@@ -101,12 +125,27 @@ const Checkout = () => {
       setAppliedCoupon(response.data);
       couponStorage.set(response.data);
       setCouponMessage(response.data.message || "Áp dụng mã giảm giá thành công.");
+      setCouponCode(code);
     } catch (error) {
       setAppliedCoupon(null);
       couponStorage.clear();
       setCouponError(error.response?.data?.message || "Không thể áp dụng mã giảm giá.");
     } finally {
       setApplyingCoupon(false);
+    }
+  };
+
+  const applyCoupon = async (e) => {
+    e.preventDefault();
+    await handleApplyCode(couponCode.trim());
+  };
+
+  const onSelectPromotion = (e) => {
+    const code = e.target.value;
+    if (code) {
+      handleApplyCode(code);
+    } else {
+      removeCoupon();
     }
   };
 
@@ -122,13 +161,21 @@ const Checkout = () => {
     e.preventDefault();
     const currentCartItems = cartStorage.getItems();
     if (!isAuthenticated) {
-      alert("Bạn cần đăng nhập để đặt hàng.");
+      alertError("Chưa đăng nhập!", "Bạn cần đăng nhập để thực hiện đặt hàng.");
       return;
     }
     if (currentCartItems.length === 0) {
-      alert("Giỏ hàng đang trống.");
+      alertError("Giỏ hàng trống!", "Vui lòng chọn sản phẩm trước khi thanh toán.");
       return;
     }
+
+    const result = await confirmAction(
+      "Xác nhận đặt hàng?",
+      `Tổng số tiền thanh toán là ${formatMoney(total)}.`,
+      "Đặt hàng ngay"
+    );
+
+    if (!result.isConfirmed) return;
 
     const shippingAddress = [
       `${formData.firstName} ${formData.lastName}`.trim(),
@@ -153,12 +200,16 @@ const Checkout = () => {
           quantity: x.quantity,
         })),
       });
-      cartStorage.clear();
+      
+      // Chỉ xóa những sản phẩm đã mua khỏi giỏ hàng chính
+      cartItems.forEach(item => cartStorage.removeItem(item.productId));
+      checkoutStorage.clear();
       couponStorage.clear();
-      alert("Đặt hàng thành công!");
+      
+      await alertSuccess("Thành công!", "Đơn hàng của bạn đã được tiếp nhận.");
       navigate("/my-orders");
     } catch (error) {
-      alert(error.response?.data?.message || "Đặt hàng thất bại.");
+      alertError("Lỗi đặt hàng", error.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -236,10 +287,24 @@ const Checkout = () => {
                     </ul>
                     <div className="discount-coupon mb-4">
                       <h6>Mã giảm giá</h6>
+                      <div className="coupon-select mb-2">
+                        <select 
+                          className="form-control" 
+                          value={appliedCoupon?.code || ""} 
+                          onChange={onSelectPromotion}
+                        >
+                          <option value="">-- Chọn mã giảm giá --</option>
+                          {promotions.map(p => (
+                            <option key={p.id} value={p.code}>
+                              {p.code} - Giảm {formatMoney(p.discountValue)}{p.discountType === 'Percentage' || p.discountType === '1' ? '%' : 'đ'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <form className="coupon-form" onSubmit={applyCoupon}>
                         <input
                           type="text"
-                          placeholder="Nhập mã giảm giá"
+                          placeholder="Hoặc nhập mã tay"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
                         />

@@ -20,6 +20,8 @@
     "react-owl-carousel": "^2.3.3",
     "react-router-dom": "^7.13.0",
     "react-select": "^5.10.2",
+    "sweetalert2": "^11.26.24",
+    "sweetalert2-react-content": "^5.1.2",
     "yet-another-react-lightbox": "^3.31.0"
   },
   "devDependencies": {

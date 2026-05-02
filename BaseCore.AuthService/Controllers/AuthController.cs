@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using BaseCore.Common;
 using BaseCore.Services.Authen;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace BaseCore.AuthService.Controllers
 {
@@ -64,8 +65,10 @@ namespace BaseCore.AuthService.Controllers
         {
             if (request == null)
             {
-                return BadRequest(new { message = "Invalid request" });
+                return BadRequest(new { message = "Invalid request payload" });
             }
+
+            System.Console.WriteLine($"Register attempt: Username={request.Username}, Email={request.Email}");
 
             if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
             {
@@ -89,12 +92,14 @@ namespace BaseCore.AuthService.Controllers
                 {
                     UserName = request.Username,
                     Name = request.Name ?? request.Username,
-                    Email = request.Email,
-                    Phone = request.Phone,
+                    Email = request.Email ?? string.Empty,
+                    Phone = request.Phone ?? string.Empty,
                     UserType = 0 // Default to regular user
                 };
 
                 var createdUser = await _userService.Create(user, request.Password, false);
+
+                System.Console.WriteLine($"Registration successful for user: {request.Username}, Id: {createdUser.Id}");
 
                 return Ok(new
                 {
@@ -106,16 +111,19 @@ namespace BaseCore.AuthService.Controllers
             {
                 // Log the exception for debugging in Development
                 System.Console.WriteLine("Registration exception: " + ex.ToString());
-                var inner = ex.InnerException != null ? (" Inner: " + ex.InnerException.Message) : string.Empty;
-                return BadRequest(new { message = "Registration failed: " + ex.Message + inner });
+                var inner = ex.InnerException != null ? ex.InnerException.Message : "None";
+                return BadRequest(new { message = $"Registration failed: {ex.Message}. Inner: {inner}" });
             }
         }
     }
 
     public class LoginRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
+        [JsonPropertyName("username")]
+        public string? Username { get; set; }
+
+        [JsonPropertyName("password")]
+        public string? Password { get; set; }
     }
 
     public class LoginResponse
@@ -131,11 +139,20 @@ namespace BaseCore.AuthService.Controllers
 
     public class RegisterRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
+        [JsonPropertyName("username")]
+        public string? Username { get; set; }
+
+        [JsonPropertyName("password")]
+        public string? Password { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("phone")]
+        public string? Phone { get; set; }
     }
 }
 

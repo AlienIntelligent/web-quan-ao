@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
 import { orderApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { alertSuccess, alertError, confirmAction } from "../services/swal";
 
 const STATUS_TABS = [
   { key: "all", label: "Tất cả", values: [] },
@@ -13,6 +14,7 @@ const STATUS_TABS = [
 ];
 
 const statusLabel = (status) => {
+  if (status === "CHO_DUYET_HUY") return "Chờ duyệt hủy";
   const match = STATUS_TABS.find((tab) => tab.values.includes(status));
   return match?.label || status || "Đang cập nhật";
 };
@@ -59,9 +61,21 @@ const MyOrders = () => {
   }, [activeTab, orders]);
 
   const cancelOrder = async (orderId) => {
-    if (!window.confirm("Bạn muốn hủy đơn hàng này?")) return;
-    await orderApi.cancel(orderId);
-    await loadOrders();
+    const result = await confirmAction(
+      "Yêu cầu hủy đơn hàng?",
+      "Bạn có chắc chắn muốn gửi yêu cầu hủy đơn hàng này không? Yêu cầu cần được Shop duyệt.",
+      "Gửi yêu cầu",
+    );
+
+    if (result.isConfirmed) {
+      try {
+        const res = await orderApi.userCancel(orderId);
+        await alertSuccess("Đã gửi yêu cầu!", res.data.message || "Yêu cầu hủy đơn đã được gửi thành công.");
+        await loadOrders();
+      } catch (err) {
+        alertError("Lỗi!", err.response?.data?.message || "Không thể gửi yêu cầu hủy đơn.");
+      }
+    }
   };
 
   return (
@@ -112,7 +126,7 @@ const MyOrders = () => {
 
               <div className="order-list">
                 {filteredOrders.map((order) => {
-                  const canCancel = ["CHO_XU_LY", "Pending"].includes(order.status);
+                  const canRequestCancel = ["CHO_XU_LY", "Pending"].includes(order.status);
                   return (
                     <div className="order-card" key={order.id}>
                       <div className="order-card-header">
@@ -120,7 +134,9 @@ const MyOrders = () => {
                           <strong>Đơn hàng #{order.id}</strong>
                           <span>{new Date(order.orderDate).toLocaleString("vi-VN")}</span>
                         </div>
-                        <div className="order-status">{statusLabel(order.status)}</div>
+                        <div className={`order-status ${order.status === "CHO_DUYET_HUY" ? "status-warning" : ""}`}>
+                          {statusLabel(order.status)}
+                        </div>
                       </div>
                       <div className="order-card-body">
                         <p><i className="fa fa-map-marker"></i> {order.shippingAddress || "Chưa có địa chỉ giao hàng"}</p>
@@ -128,7 +144,7 @@ const MyOrders = () => {
                       </div>
                       <div className="order-actions">
                         <Link to={`/orders/${order.id}/tracking`} className="primary-btn">Theo dõi đơn</Link>
-                        {canCancel && (
+                        {canRequestCancel && (
                           <button type="button" className="outline-btn" onClick={() => cancelOrder(order.id)}>
                             Hủy đơn
                           </button>

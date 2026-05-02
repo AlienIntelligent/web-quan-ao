@@ -50,7 +50,9 @@ const Register = () => {
       const payload = {
         username: formData.username.trim(),
         password: formData.password,
-        name: `${formData.firstName} ${formData.lastName}`.trim() || formData.username.trim(),
+        name:
+          `${formData.firstName} ${formData.lastName}`.trim() ||
+          formData.username.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
       };
@@ -58,7 +60,7 @@ const Register = () => {
       const response = await authApi.register(payload);
       setSuccess(
         response.data?.message ||
-          "Đã gửi đăng ký. Vui lòng chờ quản trị viên duyệt."
+          "Đã gửi đăng ký. Vui lòng chờ quản trị viên duyệt.",
       );
       setTimeout(() => navigate("/login"), 1200);
     } catch (err) {
@@ -70,18 +72,6 @@ const Register = () => {
 
   return (
     <LayoutPublic>
-      {/* Breadcrumb Section Begin */}
-      <section className="breadcrumb-section set-bg" data-setbg="/img/breadcrumb.jpg">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-12 text-center">
-              <h2>Đăng ký</h2>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* Breadcrumb Section End */}
-
       {/* Register Section Begin */}
       <div className="register-login-section spad">
         <div className="container">
@@ -90,7 +80,9 @@ const Register = () => {
               <div className="register-form">
                 <h2>Đăng ký</h2>
                 {error && <div className="alert alert-danger">{error}</div>}
-                {success && <div className="alert alert-success">{success}</div>}
+                {success && (
+                  <div className="alert alert-success">{success}</div>
+                )}
                 <form onSubmit={handleSubmit}>
                   <div className="group-input">
                     <label htmlFor="username">Tên đăng nhập *</label>
@@ -211,7 +203,11 @@ const Register = () => {
                       onChange={handleChange}
                     />
                   </div>
-                  <button type="submit" className="site-btn register-btn" disabled={loading}>
+                  <button
+                    type="submit"
+                    className="site-btn register-btn"
+                    disabled={loading}
+                  >
                     {loading ? "Đang gửi..." : "ĐĂNG KÝ"}
                   </button>
                 </form>

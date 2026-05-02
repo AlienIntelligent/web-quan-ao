@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import $ from "jquery";
+window.jQuery = window.$ = $;
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./assets/css/font-awesome.min.css";
 import "./assets/css/themify-icons.css";

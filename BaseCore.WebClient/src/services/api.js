@@ -93,11 +93,22 @@ export const categoryApi = {
 // Order API
 export const orderApi = {
     create: (data) => api.post('/orders', data),
+    checkout: (data) => api.post('/orders/checkout', data),
+    userCancel: (id) => api.put(`/orders/${id}/user-cancel`),
     getMyOrders: () => api.get('/orders'),
     getById: (id) => api.get(`/orders/${id}`),
     getAll: (params) => api.get('/orders/all', { params }),
     updateStatus: (id, status) => api.put(`/orders/${id}/status`, { status }),
     cancel: (id) => api.put(`/orders/${id}/cancel`),
+};
+
+// Cart API (New)
+export const cartApi = {
+    get: () => api.get('/cart'),
+    add: (data) => api.post('/cart/add', data),
+    update: (data) => api.put('/cart/update', data),
+    remove: (productId) => api.delete(`/cart/remove/${productId}`),
+    clear: () => api.delete('/cart/clear'),
 };
 
 // Origin API
@@ -243,6 +254,20 @@ export const couponStorage = {
     get: () => readCoupon(),
     set: (coupon) => writeCoupon(coupon),
     clear: () => writeCoupon(null),
+};
+
+const CHECKOUT_KEY = 'fashi_checkout_items';
+export const checkoutStorage = {
+    set: (items) => localStorage.setItem(CHECKOUT_KEY, JSON.stringify(items)),
+    get: () => {
+        try {
+            const raw = localStorage.getItem(CHECKOUT_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    },
+    clear: () => localStorage.removeItem(CHECKOUT_KEY),
 };
 
 export default api;

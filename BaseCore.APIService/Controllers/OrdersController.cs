@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BaseCore.Entities;
+using BaseCore.Repository;
 using BaseCore.Repository.EFCore;
 using BaseCore.Services;
 using System.Security.Claims;
@@ -22,6 +23,7 @@ namespace BaseCore.APIService.Controllers
             "DANG_VAN_CHUYEN",
             "DA_VAN_CHUYEN",
             "HUY",
+            "CHO_DUYET_HUY",
             "Pending",
             "Shipping",
             "Delivered",
@@ -33,19 +35,63 @@ namespace BaseCore.APIService.Controllers
         private readonly IProductRepository _productRepository;
         private readonly IPromotionService _promotionService;
         private readonly IRepository<OrderPromotion> _orderPromotionRepository;
+        private readonly IOrderService _orderService;
+        private readonly AppDbContext _context;
 
         public OrdersController(
             IOrderRepository orderRepository,
             IOrderDetailRepository orderDetailRepository,
             IProductRepository productRepository,
             IPromotionService promotionService,
-            IRepository<OrderPromotion> orderPromotionRepository)
+            IRepository<OrderPromotion> orderPromotionRepository,
+            IOrderService orderService,
+            AppDbContext context)
         {
             _orderRepository = orderRepository;
             _orderDetailRepository = orderDetailRepository;
             _productRepository = productRepository;
             _promotionService = promotionService;
             _orderPromotionRepository = orderPromotionRepository;
+            _orderService = orderService;
+            _context = context;
+        }
+
+        /// <summary>
+        /// Checkout from user's current cart
+        /// </summary>
+        [HttpPost("checkout")]
+        public async Task<IActionResult> Checkout([FromBody] CheckoutDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var order = await _orderService.CheckoutAsync(userId, dto.ShippingAddress ?? "");
+                return Ok(order);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}/user-cancel")]
+        public async Task<IActionResult> UserCancel(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            try
+            {
+                var requestedOrder = await _orderService.UserRequestCancelAsync(id, userId);
+                return Ok(new { message = "Yêu cầu hủy đơn đã được gửi, vui lòng chờ shop xác nhận.", order = requestedOrder });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -97,11 +143,15 @@ namespace BaseCore.APIService.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var order = await _orderRepository.GetByIdAsync(id);
-            if (order == null) return NotFound(new { message = "Order not found" });
+            var order = await _orderRepository.GetWithDetailsAsync(id);
+            if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng" });
 
-            var details = await _orderDetailRepository.GetByOrderAsync(id);
-            return Ok(new { order, details });
+            // Trả về cấu trúc mà Frontend mong đợi (payload.order và payload.details)
+            return Ok(new 
+            { 
+                order, 
+                details = order.OrderDetailOrders 
+            });
         }
 
         /// <summary>
@@ -114,105 +164,114 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            // Validate products and calculate subtotal
-            decimal subtotal = 0;
-            var orderDetails = new List<OrderDetail>();
-            var productsToUpdate = new List<Product>();
-
-            foreach (var item in dto.Items)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                if (item.Quantity <= 0)
-                    return BadRequest(new { message = "Quantity must be greater than 0" });
+                // Validate products and calculate subtotal
+                decimal subtotal = 0;
+                var orderDetails = new List<OrderDetail>();
+                var productsToUpdate = new List<Product>();
 
-                var product = await _productRepository.GetByIdAsync(item.ProductId);
-                if (product == null)
-                    return BadRequest(new { message = $"Product {item.ProductId} not found" });
-
-                if (product.Stock < item.Quantity)
-                    return BadRequest(new { message = $"Insufficient stock for {product.Name}" });
-
-                subtotal += product.Price * item.Quantity;
-                orderDetails.Add(new OrderDetail
+                foreach (var item in dto.Items)
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    UnitPrice = product.Price
-                });
+                    if (item.Quantity <= 0)
+                        return BadRequest(new { message = "Số lượng phải lớn hơn 0" });
 
-                product.Stock -= item.Quantity;
-                productsToUpdate.Add(product);
-            }
+                    var product = await _productRepository.GetByIdAsync(item.ProductId);
+                    if (product == null)
+                        return BadRequest(new { message = $"Sản phẩm #{item.ProductId} không tồn tại" });
 
-            var shippingFee = Math.Max(0, dto.ShippingFee);
-            PromotionApplicationResult? promotionResult = null;
+                    if (product.Stock < item.Quantity)
+                        return BadRequest(new { message = $"Sản phẩm {product.Name} không đủ tồn kho" });
 
-            if (!string.IsNullOrWhiteSpace(dto.PromotionCode))
-            {
-                try
-                {
-                    promotionResult = await _promotionService.ApplyPromotionAsync(
-                        dto.PromotionCode,
-                        subtotal,
-                        shippingFee);
+                    subtotal += product.Price * item.Quantity;
+                    orderDetails.Add(new OrderDetail
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        UnitPrice = product.Price
+                    });
+
+                    product.Stock -= item.Quantity;
+                    productsToUpdate.Add(product);
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+
+                var shippingFee = Math.Max(0, dto.ShippingFee);
+                PromotionApplicationResult? promotionResult = null;
+
+                if (!string.IsNullOrWhiteSpace(dto.PromotionCode))
                 {
-                    return BadRequest(new { message = ex.Message });
+                    try
+                    {
+                        promotionResult = await _promotionService.ApplyPromotionAsync(
+                            dto.PromotionCode,
+                            subtotal,
+                            shippingFee);
+                    }
+                    catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                    {
+                        return BadRequest(new { message = ex.Message });
+                    }
                 }
-            }
 
-            var totalAmount = promotionResult?.FinalTotal ?? subtotal + shippingFee;
+                var totalAmount = promotionResult?.FinalTotal ?? subtotal + shippingFee;
 
-            var order = new Order
-            {
-                UserId = userId,
-                OrderDate = DateTime.Now,
-                TotalAmount = totalAmount,
-                Status = "CHO_XU_LY",
-                ShippingAddress = dto.ShippingAddress ?? ""
-            };
-
-            await _orderRepository.AddAsync(order);
-
-            // Add order details
-            foreach (var detail in orderDetails)
-            {
-                detail.OrderId = order.Id;
-                await _orderDetailRepository.AddAsync(detail);
-            }
-
-            foreach (var product in productsToUpdate)
-            {
-                await _productRepository.UpdateAsync(product);
-            }
-
-            if (promotionResult != null)
-            {
-                await _orderPromotionRepository.AddAsync(new OrderPromotion
+                var order = new Order
                 {
-                    OrderId = order.Id,
-                    PromotionId = promotionResult.Promotion.Id,
-                    DiscountAmount = promotionResult.DiscountAmount,
-                    AppliedAt = DateTime.Now
-                });
+                    UserId = userId,
+                    OrderDate = DateTime.Now,
+                    TotalAmount = totalAmount,
+                    Status = "CHO_XU_LY",
+                    ShippingAddress = dto.ShippingAddress ?? ""
+                };
 
-                promotionResult.Promotion.UsedCount += 1;
-                await _promotionService.UpdatePromotionAsync(promotionResult.Promotion);
-            }
+                await _orderRepository.AddAsync(order);
 
-            return CreatedAtAction(nameof(GetById), new { id = order.Id }, new
-            {
-                order,
-                details = orderDetails,
-                promotion = promotionResult == null
-                    ? null
-                    : new
+                // Add order details
+                foreach (var detail in orderDetails)
+                {
+                    detail.OrderId = order.Id;
+                    await _orderDetailRepository.AddAsync(detail);
+                }
+
+                foreach (var product in productsToUpdate)
+                {
+                    await _productRepository.UpdateAsync(product);
+                }
+
+                if (promotionResult != null)
+                {
+                    await _orderPromotionRepository.AddAsync(new OrderPromotion
+                    {
+                        OrderId = order.Id,
+                        PromotionId = promotionResult.Promotion.Id,
+                        DiscountAmount = promotionResult.DiscountAmount,
+                        AppliedAt = DateTime.Now
+                    });
+
+                    promotionResult.Promotion.UsedCount += 1;
+                    await _promotionService.UpdatePromotionAsync(promotionResult.Promotion);
+                }
+
+                await transaction.CommitAsync();
+
+                return CreatedAtAction(nameof(GetById), new { id = order.Id }, new
+                {
+                    order,
+                    details = orderDetails,
+                    promotion = promotionResult == null ? null : new
                     {
                         id = promotionResult.Promotion.Id,
                         code = promotionResult.Promotion.Code,
                         discountAmount = promotionResult.DiscountAmount
                     }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+            }
         }
 
         /// <summary>
@@ -222,46 +281,44 @@ namespace BaseCore.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
-            var order = await _orderRepository.GetByIdAsync(id);
-            if (order == null) return NotFound(new { message = "Order not found" });
-
             if (!AllowedStatuses.Contains(dto.Status))
-                return BadRequest(new { message = "Invalid order status" });
+                return BadRequest(new { message = "Trạng thái đơn hàng không hợp lệ" });
 
-            order.Status = dto.Status;
-            await _orderRepository.UpdateAsync(order);
-
-            return Ok(order);
+            try
+            {
+                Order order;
+                if (dto.Status.Equals("HUY", StringComparison.OrdinalIgnoreCase))
+                {
+                    order = await _orderService.ApproveCancelOrderAsync(id);
+                }
+                else
+                {
+                    order = await _orderService.UpdateOrderStatusAsync(id, dto.Status);
+                }
+                return Ok(order);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
         /// Cancel order
         /// </summary>
         [HttpPut("{id}/cancel")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CancelOrder(int id)
         {
-            var order = await _orderRepository.GetByIdAsync(id);
-            if (order == null) return NotFound(new { message = "Order not found" });
-
-            if (order.Status is "DA_VAN_CHUYEN" or "Delivered")
-                return BadRequest(new { message = "Cannot cancel completed order" });
-
-            // Restore stock
-            var details = await _orderDetailRepository.GetByOrderAsync(id);
-            foreach (var detail in details)
+            try
             {
-                var product = await _productRepository.GetByIdAsync(detail.ProductId);
-                if (product != null)
-                {
-                    product.Stock += detail.Quantity;
-                    await _productRepository.UpdateAsync(product);
-                }
+                var order = await _orderService.ApproveCancelOrderAsync(id);
+                return Ok(new { message = "Đã phê duyệt hủy đơn hàng thành công.", order });
             }
-
-            order.Status = "HUY";
-            await _orderRepository.UpdateAsync(order);
-
-            return Ok(new { message = "Order cancelled successfully", order });
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 
@@ -282,6 +339,10 @@ namespace BaseCore.APIService.Controllers
     public class UpdateStatusDto
     {
         public string Status { get; set; } = "";
+    }
+    public class CheckoutDto
+    {
+        public string? ShippingAddress { get; set; }
     }
 }
 

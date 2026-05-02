@@ -74,47 +74,72 @@ const Header = () => {
     <header className="header-section">
       <div className="header-top">
         <div className="container">
-          <div className="row">
+          <div className="row align-items-center">
             <div className="col-lg-6 col-md-6">
-              <div className="ht-left">
-                <div className="mail-service">
+              <div className="ht-left d-flex align-items-center">
+                <div className="mail-service mr-4">
                   <i className="fa fa-envelope"></i>
-                  support@fashion-shop.vn
+                  <span className="ml-2">support@fashion-shop.vn</span>
                 </div>
                 <div className="phone-service">
                   <i className="fa fa-phone"></i>
-                  1900 6868
+                  <span className="ml-2">1900 6868</span>
                 </div>
               </div>
             </div>
             <div className="col-lg-6 col-md-6">
-              <div className="ht-right">
-                {isAuthenticated ? (
-                  <div className="login-panel">
-                    <Link to="/profile" title="Tài khoản">
-                      <i className="fa fa-user"></i>
-                      {user?.username || user?.userName || "Tài khoản"}
-                    </Link>
-                    <Link to="/my-orders" style={{ marginLeft: 10 }} title="Đơn mua">
-                      <i className="fa fa-list-alt"></i>
-                    </Link>
-                    {isAdmin() && (
-                      <Link to="/dashboard" style={{ marginLeft: 10 }} title="Trang quản trị">
-                        <i className="fa fa-cogs"></i>
-                      </Link>
-                    )}
-                    <a href="#" onClick={handleLogout} style={{ marginLeft: 10 }} title="Đăng xuất">
-                      <i className="fa fa-sign-out"></i>
-                    </a>
-                  </div>
-                ) : (
-                  <Link to="/login" className="login-panel">
-                    <i className="fa fa-user"></i>
-                    Đăng nhập
+              <div className="ht-right d-flex align-items-center justify-content-end">
+                <div className="top-link-icons d-flex align-items-center">
+                  <Link to="#" title="Thông báo">
+                    <i className="fa fa-bell-o"></i>
                   </Link>
-                )}
-                <div className="top-link">
-                  <Link to="/my-orders">Theo dõi đơn hàng</Link>
+                  <Link to="#" title="Hỗ trợ">
+                    <i className="fa fa-question-circle-o"></i>
+                  </Link>
+                  <Link to="#" title="Ngôn ngữ">
+                    <i className="fa fa-globe"></i>
+                  </Link>
+                  {isAdmin() && (
+                    <Link
+                      to="/dashboard"
+                      className="admin-link-highlight"
+                      title="Quản trị"
+                    >
+                      <i className="fa fa-dashboard"></i>
+                    </Link>
+                  )}
+                </div>
+                <div className="user-panel-top d-flex align-items-center">
+                  {isAuthenticated ? (
+                    <>
+                      <Link
+                        to="/profile"
+                        className="user-profile-link"
+                        title="Hồ sơ"
+                      >
+                        <i className="fa fa-user-circle-o"></i>
+                        <span className="ml-2">
+                          {user?.username || user?.userName || "Tài khoản"}
+                        </span>
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="logout-btn-top ml-3"
+                        title="Đăng xuất"
+                      >
+                        <i className="fa fa-sign-out"></i>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/register" title="Đăng ký" className="mr-3">
+                        <i className="fa fa-user-plus"></i>
+                      </Link>
+                      <Link to="/login" title="Đăng nhập">
+                        <i className="fa fa-sign-in"></i>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -124,23 +149,25 @@ const Header = () => {
 
       <div className="container">
         <div className="inner-header">
-          <div className="row">
+          <div className="row align-items-center">
             <div className="col-lg-2 col-md-2">
               <div className="logo">
-                <Link to="/">
+                <Link to="/" className="logo-circle">
                   <img src="/img/logo.png" alt="Fashion Shop" />
                 </Link>
               </div>
             </div>
-            <div className="col-lg-7 col-md-7">
-              <form className="advanced-search product-search-form" onSubmit={handleProductSearch}>
+            <div className="col-lg-8 col-md-8">
+              <form
+                className="advanced-search product-search-form"
+                onSubmit={handleProductSearch}
+              >
                 <select
                   className="category-btn"
                   value={searchCategoryId}
                   onChange={(e) => setSearchCategoryId(e.target.value)}
-                  aria-label="Danh mục sản phẩm"
                 >
-                  <option value="">Tất cả thời trang</option>
+                  <option value="">Tất cả</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -155,13 +182,13 @@ const Header = () => {
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                   />
-                  <button type="submit" aria-label="Tìm kiếm">
+                  <button type="submit">
                     <i className="ti-search"></i>
                   </button>
                 </div>
               </form>
             </div>
-            <div className="col-lg-3 text-right col-md-3">
+            <div className="col-lg-2 text-right col-md-2">
               <ul className="nav-right">
                 <li className="order-icon">
                   <Link to="/my-orders" title="Đơn mua">
@@ -179,49 +206,24 @@ const Header = () => {
                       <h5>{formatMoney(cartTotal)}</h5>
                     </div>
                     <div className="select-button">
-                      <Link to="/shopping-cart" className="primary-btn view-card">
+                      <Link
+                        to="/shopping-cart"
+                        className="primary-btn view-card"
+                      >
                         Xem giỏ hàng
                       </Link>
-                      <Link to="/check-out" className="primary-btn checkout-btn">
+                      <Link
+                        to="/check-out"
+                        className="primary-btn checkout-btn"
+                      >
                         Thanh toán
                       </Link>
                     </div>
                   </div>
                 </li>
-                <li className="cart-price">{formatMoney(cartTotal)}</li>
               </ul>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="nav-item">
-        <div className="container">
-          <div className="nav-depart">
-            <div className="depart-btn">
-              <i className="ti-menu"></i>
-              <span>Danh mục thời trang</span>
-              <ul className="depart-hover">
-                <li><Link to="/shop?keyword=áo">Áo</Link></li>
-                <li><Link to="/shop?keyword=quần">Quần</Link></li>
-                <li><Link to="/shop?keyword=váy">Váy</Link></li>
-                <li><Link to="/shop?keyword=nam">Thời trang nam</Link></li>
-                <li><Link to="/shop?keyword=nữ">Thời trang nữ</Link></li>
-                <li><Link to="/shop?keyword=trẻ em">Thời trang trẻ em</Link></li>
-                <li><Link to="/shop?keyword=phụ kiện">Phụ kiện</Link></li>
-              </ul>
-            </div>
-          </div>
-          <nav className="nav-menu mobile-menu">
-            <ul>
-              <li className={navClass("/home")}><Link to="/home">Trang chủ</Link></li>
-              <li className={navClass("/shop")}><Link to="/shop">Sản phẩm</Link></li>
-              <li className={navClass("/my-orders")}><Link to="/my-orders">Đơn mua</Link></li>
-              <li className={navClass("/shopping-cart")}><Link to="/shopping-cart">Giỏ hàng</Link></li>
-              <li className={navClass("/profile")}><Link to="/profile">Tài khoản</Link></li>
-            </ul>
-          </nav>
-          <div id="mobile-menu-wrap"></div>
         </div>
       </div>
     </header>

@@ -21,7 +21,7 @@ namespace BaseCore.APIService.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> GetAll(
             [FromQuery] string keyword = "",
             [FromQuery] bool? isActive = null,

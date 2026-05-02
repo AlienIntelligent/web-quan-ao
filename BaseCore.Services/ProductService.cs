@@ -60,13 +60,15 @@ namespace BaseCore.Services
             await _productRepository.DeleteByIdAsync(id);
         }
 
-        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, int page, int pageSize)
+        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, decimal? minPrice, decimal? maxPrice, int page, int pageSize)
         {
             var result = await _productRepository.GetPagedAsync(
                 page, 
                 pageSize, 
                 p => (string.IsNullOrEmpty(keyword) || p.Name.Contains(keyword) || p.Description.Contains(keyword)) &&
-                     (!categoryId.HasValue || p.CategoryId == categoryId.Value),
+                     (!categoryId.HasValue || p.CategoryId == categoryId.Value) &&
+                     (!minPrice.HasValue || p.Price >= minPrice.Value) &&
+                     (!maxPrice.HasValue || p.Price <= maxPrice.Value),
                 p => p.Id,
                 true);
 

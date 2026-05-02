@@ -100,6 +100,7 @@ namespace BaseCore.Services.Authen
             user.Password = TokenHelper.HashPassword(password, out salt);
             user.Salt = salt;
 
+            user.Id ??= Guid.NewGuid().ToString();
             user.Created = DateTime.Now;
             user.IsActive = isActive;
             // Ensure non-nullable DB columns have defaults to avoid SQL errors
@@ -121,6 +122,16 @@ namespace BaseCore.Services.Authen
                 user.Password = TokenHelper.HashPassword(password, out salt);
                 user.Salt = salt;
             }
+
+            // Ensure non-nullable DB columns have defaults to avoid SQL errors on update
+            user.Name ??= user.UserName;
+            user.Contact ??= string.Empty;
+            user.Email ??= string.Empty;
+            user.Phone ??= string.Empty;
+            user.Position ??= string.Empty;
+            user.Image ??= string.Empty;
+            user.Salt ??= new byte[0];
+
             await _userRepository.UpdateAsync(user);
         }
 
