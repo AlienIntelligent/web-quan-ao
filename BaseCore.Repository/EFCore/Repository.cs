@@ -77,9 +77,19 @@ namespace BaseCore.Repository.EFCore
             int pageSize,
             Expression<Func<T, bool>>? filter = null,
             Expression<Func<T, object>>? orderBy = null,
-            bool descending = false)
+            bool descending = false,
+            params Expression<Func<T, object>>[] includes)
         {
             IQueryable<T> query = _dbSet;
+
+            // Apply includes
+            if (includes != null)
+            {
+                foreach (var include in includes)
+                {
+                    query = query.Include(include);
+                }
+            }
 
             // Apply filter
             if (filter != null)

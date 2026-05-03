@@ -1,8 +1,31 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { confirmAction, alertError } from "../services/swal";
+import { cartStorage, checkoutStorage } from "../services/api";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
+
+  const handleCheckoutClick = async (e) => {
+    e.preventDefault();
+    const items = cartStorage.getItems();
+    if (items.length === 0) {
+      alertError("Giỏ hàng trống!", "Vui lòng chọn sản phẩm vào giỏ hàng trước khi thanh toán.");
+      return;
+    }
+
+    const result = await confirmAction(
+      "Xác nhận thanh toán?",
+      "Bạn có chắc chắn muốn thanh toán toàn bộ giỏ hàng?",
+      "Thanh toán ngay"
+    );
+
+    if (result.isConfirmed) {
+      checkoutStorage.set(items);
+      navigate("/check-out");
+    }
+  };
 
   return (
     <footer className="footer-section">
@@ -28,7 +51,7 @@ const Footer = () => {
               <ul>
                 <li><Link to="/shop">Tất cả sản phẩm</Link></li>
                 <li><Link to="/shopping-cart">Giỏ hàng</Link></li>
-                <li><Link to="/check-out">Thanh toán</Link></li>
+                <li><a href="/check-out" onClick={handleCheckoutClick}>Thanh toán</a></li>
                 <li><Link to="/my-orders">Theo dõi đơn</Link></li>
               </ul>
             </div>

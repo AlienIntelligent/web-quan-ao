@@ -43,8 +43,9 @@ const ShoppingCart = () => {
   );
 
   const shipping = selectedItems.length ? 30000 : 0;
+  const vat = Math.round(subtotal * 0.08); // VAT 8% theo quy định hiện hành
   const discount = appliedCoupon?.discountAmount || 0;
-  const total = Math.max(0, subtotal + shipping - discount);
+  const total = Math.max(0, subtotal + shipping + vat - discount);
   const formatMoney = (value) =>
     Number(value || 0).toLocaleString("vi-VN", {
       style: "currency",
@@ -320,16 +321,33 @@ const ShoppingCart = () => {
               <button className="btn-link ml-4" onClick={removeSelected} style={{ color: '#222' }}>Xóa mục đã chọn</button>
             </div>
             <div className="checkout-right d-flex align-items-center">
-              <div className="total-label text-right">
-                <div>Tổng thanh toán ({selectedItems.length} Sản phẩm):</div>
+              <div className="total-label text-right" style={{ minWidth: '280px' }}>
+                <div className="d-flex justify-content-between mb-1" style={{ fontSize: '13px', color: '#666' }}>
+                  <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
+                  <span>{formatMoney(subtotal)}</span>
+                </div>
+                <div className="d-flex justify-content-between mb-1" style={{ fontSize: '13px', color: '#666' }}>
+                  <span>Phí vận chuyển:</span>
+                  <span>{formatMoney(shipping)}</span>
+                </div>
+                <div className="d-flex justify-content-between mb-1" style={{ fontSize: '13px', color: '#666' }}>
+                  <span>Thuế VAT (8%):</span>
+                  <span>{formatMoney(vat)}</span>
+                </div>
                 {appliedCoupon && (
-                  <div className="small text-muted">Tiết kiệm: {formatMoney(discount)}</div>
+                  <div className="d-flex justify-content-between mb-1 text-success" style={{ fontSize: '13px' }}>
+                    <span>Giảm giá:</span>
+                    <span>-{formatMoney(discount)}</span>
+                  </div>
                 )}
+                <div className="mt-2 pt-2 border-top d-flex justify-content-end align-items-center">
+                  <span style={{ fontSize: '16px', fontWeight: '500', color: '#222', marginRight: '10px' }}>Tổng thanh toán ({selectedItems.length} sản phẩm):</span>
+                  <div className="total-amount">{formatMoney(total)}</div>
+                </div>
               </div>
-              <div className="total-amount mx-3">{formatMoney(total)}</div>
               <button 
                 onClick={handlePurchase} 
-                className="btn-purchase" 
+                className="btn-purchase ml-4" 
                 disabled={selectedItems.length === 0}
                 style={{ opacity: selectedItems.length === 0 ? 0.6 : 1 }}
               >

@@ -173,11 +173,11 @@ const ReviewsAdmin = () => {
     <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Reviews Management</h1>
+          <h1 className="m-0 text-dark">Quản lý Đánh giá</h1>
           <div className="mt-2">
-            <small>
-              {selectedProduct ? `Product: ${selectedProduct.name}` : "Select a product"}
-            </small>
+            <span className="text-muted">
+              {selectedProduct ? `Sản phẩm: ${selectedProduct.name}` : "Vui lòng chọn một sản phẩm"}
+            </span>
           </div>
         </div>
       </div>
@@ -188,29 +188,31 @@ const ReviewsAdmin = () => {
 
           <div className="card">
             <div className="card-header">
-              <div className="row">
+              <div className="row align-items-center">
                 <div className="col-md-6">
-                  <label>Product</label>
-                  <select
-                    className="form-control"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="form-group mb-0">
+                    <label className="mr-2">Lọc theo sản phẩm:</label>
+                    <select
+                      className="form-control"
+                      value={selectedProductId}
+                      onChange={(e) => setSelectedProductId(e.target.value)}
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="col-md-6 text-right d-flex align-items-end justify-content-end">
+                <div className="col-md-6 text-right">
                   {isAdmin() && (
                     <button
                       className="btn btn-success"
                       disabled={!selectedProductId}
                       onClick={() => openModal(null)}
                     >
-                      <i className="fas fa-plus"></i> Add Review
+                      <i className="fas fa-plus"></i> Thêm Đánh giá
                     </button>
                   )}
                 </div>
@@ -221,33 +223,39 @@ const ReviewsAdmin = () => {
               {loading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary" />
+                  <div className="mt-2">Đang tải dữ liệu...</div>
                 </div>
               ) : (
                 <>
-                  <table className="table table-bordered table-striped">
+                  <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>UserId</th>
-                        <th>Rating</th>
-                        <th>Comment</th>
-                        <th>CreatedAt</th>
-                        {isAdmin() && <th>Actions</th>}
+                        <th style={{ width: '80px' }}>ID</th>
+                        <th>Mã khách hàng</th>
+                        <th>Xếp hạng</th>
+                        <th>Nội dung bình luận</th>
+                        <th>Ngày tạo</th>
+                        {isAdmin() && <th style={{ width: '150px' }}>Thao tác</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {reviews.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin() ? 6 : 5} className="text-center">
-                            No data
+                          <td colSpan={isAdmin() ? 6 : 5} className="text-center py-4">
+                            Sản phẩm này chưa có đánh giá nào
                           </td>
                         </tr>
                       ) : (
                         reviews.map((r) => (
                           <tr key={r.id}>
                             <td>{r.id}</td>
-                            <td>{r.userId}</td>
-                            <td>{r.rating}</td>
+                            <td className="font-weight-bold">{r.userId}</td>
+                            <td>
+                                <span className="text-warning">
+                                    {[...Array(r.rating)].map((_, i) => <i key={i} className="fas fa-star"></i>)}
+                                    {[...Array(5 - r.rating)].map((_, i) => <i key={i} className="far fa-star"></i>)}
+                                </span>
+                            </td>
                             <td style={{ maxWidth: 420 }}>
                               {r.comment ?? ""}
                             </td>
@@ -257,14 +265,16 @@ const ReviewsAdmin = () => {
                                 <button
                                   className="btn btn-sm btn-info mr-1"
                                   onClick={() => openModal(r)}
+                                  title="Sửa"
                                 >
-                                  Edit
+                                  <i className="fas fa-edit"></i>
                                 </button>
                                 <button
                                   className="btn btn-sm btn-danger"
                                   onClick={() => handleDelete(r.id)}
+                                  title="Xóa"
                                 >
-                                  Delete
+                                  <i className="fas fa-trash"></i>
                                 </button>
                               </td>
                             )}
@@ -274,24 +284,24 @@ const ReviewsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="pagination-container">
                       <button
-                        className="btn btn-outline-secondary btn-sm mr-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page <= 1}
                         onClick={() => setPage((p) => p - 1)}
                       >
-                        Prev
+                        <i className="fas fa-chevron-left"></i> Trước
                       </button>
-                      <span>
-                        Page {page}/{totalPages}
+                      <span className="mx-3 font-weight-bold">
+                        Trang {page} / {totalPages}
                       </span>
                       <button
-                        className="btn btn-outline-secondary btn-sm ml-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page >= totalPages}
                         onClick={() => setPage((p) => p + 1)}
                       >
-                        Next
+                        Sau <i className="fas fa-chevron-right"></i>
                       </button>
                     </div>
                   </div>
@@ -307,7 +317,7 @@ const ReviewsAdmin = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{editing ? "Edit Review" : "Add Review"}</h5>
+                <h5 className="modal-title font-weight-bold">{editing ? "Cập nhật Đánh giá" : "Thêm Đánh giá mới"}</h5>
                 <button type="button" className="close" onClick={closeModal}>
                   <span>&times;</span>
                 </button>
@@ -318,57 +328,63 @@ const ReviewsAdmin = () => {
                   {error && <div className="alert alert-danger">{error}</div>}
 
                   <div className="form-group">
-                    <label>ProductId</label>
+                    <label>Sản phẩm (Mã ID)</label>
                     <input
                       type="number"
                       className="form-control"
                       value={formData.productId}
                       onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
                       required
+                      readOnly
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>UserId</label>
+                    <label>Mã khách hàng / Tên đăng nhập</label>
                     <input
                       type="text"
                       className="form-control"
                       value={formData.userId}
                       onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
                       required
+                      placeholder="VD: user_01"
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>Rating (1-5)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="5"
+                    <label>Xếp hạng (1 - 5 sao)</label>
+                    <select
                       className="form-control"
                       value={formData.rating}
                       onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
                       required
-                    />
+                    >
+                        <option value="5">5 sao - Tuyệt vời</option>
+                        <option value="4">4 sao - Tốt</option>
+                        <option value="3">3 sao - Bình thường</option>
+                        <option value="2">2 sao - Kém</option>
+                        <option value="1">1 sao - Tệ</option>
+                    </select>
                   </div>
 
                   <div className="form-group">
-                    <label>Comment</label>
+                    <label>Nội dung bình luận</label>
                     <textarea
                       className="form-control"
                       rows="3"
                       value={formData.comment}
                       onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                      placeholder="Nhập nội dung đánh giá của khách hàng..."
                     />
                   </div>
                 </div>
 
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
+                    Hủy bỏ
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editing ? "Update" : "Create"}
+                    {editing ? "Lưu thay đổi" : "Tạo ngay"}
                   </button>
                 </div>
               </form>

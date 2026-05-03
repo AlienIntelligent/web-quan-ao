@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
 import { orderApi } from "../services/api";
+import { alertSuccess, alertError, confirmAction } from "../services/swal";
 
 const STEPS = [
   { key: "created", label: "Đã đặt hàng", icon: "fa-check" },
@@ -11,10 +12,11 @@ const STEPS = [
 ];
 
 const activeStepByStatus = (status) => {
-  if (["DA_VAN_CHUYEN", "Delivered"].includes(status)) return 3;
+  if (["DA_VAN_CHUYEN", "Delivered", "DA_GIAO"].includes(status)) return 3;
   if (["DANG_VAN_CHUYEN", "Shipping"].includes(status)) return 2;
-  if (["HUY", "Cancelled"].includes(status)) return -1;
-  return 1;
+  if (["CHO_LAY_HANG", "Processing", "Shop xác nhận"].includes(status)) return 1;
+  if (["HUY", "Cancelled", "CHO_DUYET_HUY"].includes(status)) return -1;
+  return 0; // Đã đặt hàng
 };
 
 const formatMoney = (value) =>
@@ -46,6 +48,26 @@ const OrderTracking = () => {
 
     loadOrder();
   }, [id]);
+
+  const handleCancel = async () => {
+    const result = await confirmAction(
+      "Xác nhận hủy đơn?",
+      "Bạn có chắc chắn muốn gửi yêu cầu hủy đơn hàng này không?",
+      "Xác nhận hủy"
+    );
+
+    if (result.isConfirmed) {
+      try {
+        await orderApi.userCancel(id);
+        alertSuccess("Thành công!", "Yêu cầu hủy đơn đã được gửi. Vui lòng chờ shop xác nhận.");
+        // Reload order data
+        const response = await orderApi.getById(id);
+        setPayload(response.data);
+      } catch (err) {
+        alertError("Thất bại!", err.response?.data?.message || "Không thể hủy đơn hàng.");
+      }
+    }
+  };
 
   const order = payload?.order;
   const details = Array.isArray(payload?.details) ? payload.details : [];
@@ -89,12 +111,18 @@ const OrderTracking = () => {
                 <div className="alert alert-warning">Đơn hàng đã bị hủy. Nếu cần hỗ trợ, vui lòng liên hệ shop.</div>
               ) : (
                 <div className="tracking-steps">
-                  {STEPS.map((step, index) => (
-                    <div className={`tracking-step ${index <= activeStep ? "done" : ""}`} key={step.key}>
-                      <div className="tracking-icon"><i className={`fa ${step.icon}`}></i></div>
-                      <span>{step.label}</span>
-                    </div>
-                  ))}
+                  {STEPS.map((step, index) => {
+                    const isDone = index <= activeStep;
+                    const isCurrent = index === activeStep;
+                    return (
+                      <div className={`tracking-step ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}`} key={step.key}>
+                        <div className="tracking-icon">
+                          <i className={`fa ${isCurrent ? step.icon : (isDone ? "fa-check" : step.icon)}`}></i>
+                        </div>
+                        <span>{step.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -128,6 +156,20 @@ const OrderTracking = () => {
                       <p><i className="fa fa-truck"></i> Cập nhật vận chuyển theo trạng thái đơn hàng của shop.</p>
                     </div>
                     <Link to="/my-orders" className="outline-btn full-width">Quay lại đơn mua</Link>
+                    {order && !["HUY", "Cancelled", "CHO_DUYET_HUY", "DA_VAN_CHUYEN", "Delivered", "DANG_VAN_CHUYEN", "Shipping"].includes(order.status) && (
+                      <button 
+                        onClick={handleCancel} 
+                        className="primary-btn full-width mt-2" 
+                        style={{ backgroundColor: "#252525", borderColor: "#252525" }}
+                      >
+                        Hủy đơn
+                      </button>
+                    )}
+                    {order && order.status === "CHO_DUYET_HUY" && (
+                      <div className="alert alert-info mt-3 py-2 text-center" style={{ fontSize: '13px' }}>
+                        Đang chờ shop duyệt hủy
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

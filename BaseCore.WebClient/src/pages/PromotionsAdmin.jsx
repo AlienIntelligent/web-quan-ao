@@ -177,7 +177,7 @@ const PromotionsAdmin = () => {
     <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Promotions Management</h1>
+          <h1 className="m-0 text-dark">Quản lý Khuyến mãi</h1>
         </div>
       </div>
 
@@ -188,7 +188,7 @@ const PromotionsAdmin = () => {
               <form onSubmit={handleSearch} className="form-inline">
                 <input
                   className="form-control mr-2"
-                  placeholder="Search by code/name"
+                  placeholder="Tìm theo mã hoặc tên..."
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                 />
@@ -197,78 +197,89 @@ const PromotionsAdmin = () => {
                   value={isActive}
                   onChange={(e) => setIsActive(e.target.value)}
                 >
-                  <option value="">All</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="true">Đang kích hoạt</option>
+                  <option value="false">Đang tạm dừng</option>
                 </select>
                 <button className="btn btn-primary" type="submit">
-                  Search
+                  <i className="fas fa-search"></i> Tìm kiếm
                 </button>
               </form>
             </div>
 
             <div className="card-body">
               {loading ? (
-                <div className="text-center py-5">Loading...</div>
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary"></div>
+                  <div className="mt-2">Đang tải dữ liệu...</div>
+                </div>
               ) : (
                 <>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span>Total: {totalCount}</span>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="text-muted">Tổng số: <strong>{totalCount}</strong> chương trình</span>
                     {isAdmin() && (
                       <button
                         className="btn btn-success btn-sm"
                         onClick={() => openModal()}
                       >
-                        Add Promotion
+                        <i className="fas fa-plus"></i> Thêm Khuyến mãi
                       </button>
                     )}
                   </div>
 
-                  <table className="table table-bordered table-striped">
+                  <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Discount</th>
-                        <th>Active</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        {isAdmin() && <th>Actions</th>}
+                        <th style={{ width: '60px' }}>ID</th>
+                        <th>Mã KM</th>
+                        <th>Tên chương trình</th>
+                        <th>Mức giảm</th>
+                        <th>Trạng thái</th>
+                        <th>Bắt đầu</th>
+                        <th>Kết thúc</th>
+                        {isAdmin() && <th style={{ width: '150px' }}>Thao tác</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin() ? 8 : 7} className="text-center">
-                            No promotions found
+                          <td colSpan={isAdmin() ? 8 : 7} className="text-center py-4">
+                            Không tìm thấy chương trình khuyến mãi nào
                           </td>
                         </tr>
                       ) : (
                         items.map((p) => (
                           <tr key={p.id}>
                             <td>{p.id}</td>
-                            <td>{p.code}</td>
-                            <td>{p.name}</td>
+                            <td><span className="badge badge-primary px-2 py-1">{p.code}</span></td>
+                            <td className="font-weight-bold">{p.name}</td>
                             <td>
-                              {p.discountType} {p.discountValue}
+                              <span className="text-danger font-weight-bold">
+                                {p.discountType === 'PERCENT' ? `${p.discountValue}%` : `${p.discountValue?.toLocaleString()} VND`}
+                              </span>
                             </td>
-                            <td>{p.isActive ? "Active" : "Inactive"}</td>
-                            <td>{p.startDate ? new Date(p.startDate).toLocaleDateString() : ""}</td>
-                            <td>{p.endDate ? new Date(p.endDate).toLocaleDateString() : ""}</td>
+                            <td>
+                                <span className={`badge ${p.isActive ? 'badge-success' : 'badge-secondary'}`}>
+                                    {p.isActive ? "Đang chạy" : "Tạm dừng"}
+                                </span>
+                            </td>
+                            <td>{p.startDate ? new Date(p.startDate).toLocaleDateString('vi-VN') : "-"}</td>
+                            <td>{p.endDate ? new Date(p.endDate).toLocaleDateString('vi-VN') : "-"}</td>
                             {isAdmin() && (
                               <td>
                                 <button
                                   className="btn btn-sm btn-info mr-1"
                                   onClick={() => openModal(p)}
+                                  title="Sửa"
                                 >
-                                  Edit
+                                  <i className="fas fa-edit"></i>
                                 </button>
                                 <button
                                   className="btn btn-sm btn-danger"
                                   onClick={() => handleDelete(p.id)}
+                                  title="Xóa"
                                 >
-                                  Delete
+                                  <i className="fas fa-trash"></i>
                                 </button>
                               </td>
                             )}
@@ -278,27 +289,26 @@ const PromotionsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="pagination-container">
                       <button
-                        className="btn btn-outline-secondary btn-sm mr-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page <= 1}
                         onClick={() => setPage((p) => p - 1)}
                       >
-                        Prev
+                        <i className="fas fa-chevron-left"></i> Trước
                       </button>
-                      <span>
-                        {page}/{totalPages}
+                      <span className="mx-3 font-weight-bold">
+                        Trang {page} / {totalPages}
                       </span>
                       <button
-                        className="btn btn-outline-secondary btn-sm ml-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page >= totalPages}
                         onClick={() => setPage((p) => p + 1)}
                       >
-                        Next
+                        Sau <i className="fas fa-chevron-right"></i>
                       </button>
                     </div>
-                    <ul className="pagination mb-0">{renderPagination()}</ul>
                   </div>
                 </>
               )}
@@ -309,11 +319,11 @@ const PromotionsAdmin = () => {
 
       {showModal && (
         <div className="modal fade show" style={{ display: "block" }} tabIndex="-1">
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">
-                  {editing ? "Edit Promotion" : "Add Promotion"}
+                <h5 className="modal-title font-weight-bold">
+                  {editing ? "Cập nhật Khuyến mãi" : "Tạo Khuyến mãi mới"}
                 </h5>
                 <button type="button" className="close" onClick={closeModal}>
                   <span>&times;</span>
@@ -323,122 +333,164 @@ const PromotionsAdmin = () => {
                 <div className="modal-body">
                   {error && <div className="alert alert-danger">{error}</div>}
 
-                  <div className="form-group">
-                    <label>Code</label>
-                    <input
-                      className="form-control"
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      required
-                    />
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Mã khuyến mãi (Code)</label>
+                        <input
+                          className="form-control"
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          required
+                          placeholder="VD: GIAM20, TET2024..."
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Tên chương trình</label>
+                        <input
+                          className="form-control"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                          placeholder="VD: Khuyến mãi Tết Nguyên Đán"
+                        />
+                      </div>
+                    </div>
                   </div>
+
                   <div className="form-group">
-                    <label>Name</label>
-                    <input
-                      className="form-control"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Description</label>
-                    <input
+                    <label>Mô tả chi tiết</label>
+                    <textarea
                       className="form-control"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Nhập nội dung khuyến mãi..."
+                      rows="2"
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Discount Type</label>
-                    <input
-                      className="form-control"
-                      value={formData.discountType}
-                      onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                    />
+
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Loại giảm giá</label>
+                        <select
+                          className="form-control"
+                          value={formData.discountType}
+                          onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                        >
+                            <option value="PERCENT">Phần trăm (%)</option>
+                            <option value="AMOUNT">Số tiền cố định (VND)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Giá trị giảm</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.discountValue}
+                          onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                          placeholder="VD: 20 hoặc 50000"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Discount Value</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.discountValue}
-                      onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    />
+
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Giá trị đơn hàng tối thiểu</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.minimumOrderAmount}
+                          onChange={(e) =>
+                            setFormData({ ...formData, minimumOrderAmount: e.target.value })
+                          }
+                          placeholder="VD: 200000"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Số tiền giảm tối đa (Nếu chọn %)</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.maximumDiscountAmount}
+                          onChange={(e) =>
+                            setFormData({ ...formData, maximumDiscountAmount: e.target.value })
+                          }
+                          placeholder="Bỏ trống nếu không giới hạn"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Minimum Order Amount</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.minimumOrderAmount}
-                      onChange={(e) =>
-                        setFormData({ ...formData, minimumOrderAmount: e.target.value })
-                      }
-                    />
+
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Ngày bắt đầu</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={formData.startDate}
+                          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Ngày kết thúc</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={formData.endDate}
+                          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Maximum Discount Amount</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.maximumDiscountAmount}
-                      onChange={(e) =>
-                        setFormData({ ...formData, maximumDiscountAmount: e.target.value })
-                      }
-                      placeholder="(optional)"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Start Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>End Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Usage Limit</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.usageLimit}
-                      onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                      placeholder="(optional)"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <div className="custom-control custom-switch">
-                      <input
-                        type="checkbox"
-                        className="custom-control-input"
-                        id="isActive"
-                        checked={formData.isActive}
-                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      />
-                      <label className="custom-control-label" htmlFor="isActive">
-                        Active
-                      </label>
+
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label>Giới hạn số lần sử dụng</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.usageLimit}
+                          onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
+                          placeholder="Bỏ trống nếu không giới hạn"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6 d-flex align-items-center mt-3">
+                      <div className="custom-control custom-switch">
+                        <input
+                          type="checkbox"
+                          className="custom-control-input"
+                          id="isActivePromo"
+                          checked={formData.isActive}
+                          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                        />
+                        <label className="custom-control-label" htmlFor="isActivePromo">
+                          Kích hoạt chương trình
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
+                    Hủy bỏ
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editing ? "Update" : "Create"}
+                    {editing ? "Lưu thay đổi" : "Tạo ngay"}
                   </button>
                 </div>
               </form>

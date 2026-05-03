@@ -51,7 +51,10 @@ const Home = () => {
 
   const addToCart = (product) => {
     cartStorage.addItem(product);
-    alertSuccess("Đã thêm!", `Sản phẩm ${product.name} đã được thêm vào giỏ hàng.`);
+    alertSuccess(
+      "Đã thêm!",
+      `Sản phẩm ${product.name} đã được thêm vào giỏ hàng.`,
+    );
   };
 
   return (
@@ -87,9 +90,8 @@ const Home = () => {
                 </div>
               </div>
               <div className="off-card">
-                <h2>
-                  50% <span>OFF</span>
-                </h2>
+                <h2>70%</h2>
+                <span>OFF</span>
               </div>
             </div>
           </div>
@@ -112,9 +114,8 @@ const Home = () => {
                 </div>
               </div>
               <div className="off-card">
-                <h2>
-                  70% <span>OFF</span>
-                </h2>
+                <h2>70%</h2>
+                <span>OFF</span>
               </div>
             </div>
           </div>
@@ -154,11 +155,23 @@ const Home = () => {
               <div className="col-lg-4" key={category.title}>
                 <Link
                   to={`/shop?keyword=${encodeURIComponent(category.query)}`}
-                  className="single-banner"
+                  style={{ textDecoration: "none" }}
                 >
-                  <img src={category.image} alt={category.title} />
-                  <div className="inner-text">
-                    <h4>{category.title}</h4>
+                  <div className="single-banner">
+                    <img src={category.image} alt={category.title} />
+                  </div>
+                  <div className="category-info text-center mt-3">
+                    <h4
+                      style={{
+                        fontWeight: 700,
+                        color: "#111",
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                        fontSize: "18px",
+                      }}
+                    >
+                      {category.title}
+                    </h4>
                   </div>
                 </Link>
               </div>

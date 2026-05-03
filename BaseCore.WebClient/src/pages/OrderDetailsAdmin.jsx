@@ -126,7 +126,7 @@ const OrderDetailsAdmin = () => {
     <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Order Details Management</h1>
+          <h1 className="m-0 text-dark">Quản lý Chi tiết Đơn hàng</h1>
         </div>
       </div>
 
@@ -137,65 +137,70 @@ const OrderDetailsAdmin = () => {
               <form onSubmit={handleSearch} className="form-inline">
                 <input
                   className="form-control mr-2"
-                  placeholder="Keyword (OrderId / ProductId)"
+                  placeholder="Tìm theo Mã đơn / Mã SP..."
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                 />
                 <button className="btn btn-primary" type="submit">
-                  Search
+                  <i className="fas fa-search"></i> Tìm kiếm
                 </button>
               </form>
             </div>
 
             <div className="card-body">
               {loading ? (
-                <div className="text-center py-5">Loading...</div>
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary"></div>
+                  <div className="mt-2">Đang tải dữ liệu...</div>
+                </div>
               ) : (
                 <>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span>Total: {totalCount}</span>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="text-muted">Tổng cộng: <strong>{totalCount}</strong> dòng chi tiết</span>
                     {isAdmin() && (
                       <button className="btn btn-success btn-sm" onClick={() => openModal()}>
-                        Add
+                        <i className="fas fa-plus"></i> Thêm Chi tiết
                       </button>
                     )}
                   </div>
 
-                  <table className="table table-bordered table-striped">
+                  <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>OrderId</th>
-                        <th>Product</th>
-                        <th>Qty</th>
-                        <th>UnitPrice</th>
-                        {isAdmin() && <th>Actions</th>}
+                        <th style={{ width: '80px' }}>ID</th>
+                        <th>Mã đơn hàng</th>
+                        <th>Sản phẩm</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                        {isAdmin() && <th style={{ width: '150px' }}>Thao tác</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin() ? 7 : 6} className="text-center">
-                            No data found
+                          <td colSpan={isAdmin() ? 7 : 6} className="text-center py-4">
+                            Không tìm thấy dữ liệu chi tiết đơn hàng
                           </td>
                         </tr>
                       ) : (
                         items.map((od) => (
                           <tr key={od.id}>
                             <td>{od.id}</td>
-                            <td>{od.orderId}</td>
+                            <td><strong>#{od.orderId}</strong></td>
                             <td>
-                              {od.productId} - {od.productName}
+                              <span className="text-primary">{od.productId}</span> - {od.productName}
                             </td>
                             <td>{od.quantity}</td>
-                            <td>{od.unitPrice}</td>
+                            <td>{od.unitPrice?.toLocaleString()} VND</td>
+                            <td className="font-weight-bold">{(od.quantity * od.unitPrice)?.toLocaleString()} VND</td>
                             {isAdmin() && (
                               <td>
-                                <button className="btn btn-sm btn-info mr-1" onClick={() => openModal(od)}>
-                                  Edit
+                                <button className="btn btn-sm btn-info mr-1" onClick={() => openModal(od)} title="Sửa">
+                                  <i className="fas fa-edit"></i>
                                 </button>
-                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(od.id)}>
-                                  Delete
+                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(od.id)} title="Xóa">
+                                  <i className="fas fa-trash"></i>
                                 </button>
                               </td>
                             )}
@@ -205,27 +210,26 @@ const OrderDetailsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="pagination-container">
                       <button
-                        className="btn btn-outline-secondary btn-sm mr-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page <= 1}
                         onClick={() => setPage((p) => p - 1)}
                       >
-                        Prev
+                        <i className="fas fa-chevron-left"></i> Trước
                       </button>
-                      <span>
-                        {page}/{totalPages}
+                      <span className="mx-3 font-weight-bold">
+                        Trang {page} / {totalPages}
                       </span>
                       <button
-                        className="btn btn-outline-secondary btn-sm ml-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page >= totalPages}
                         onClick={() => setPage((p) => p + 1)}
                       >
-                        Next
+                        Sau <i className="fas fa-chevron-right"></i>
                       </button>
                     </div>
-                    <ul className="pagination mb-0">{renderPagination()}</ul>
                   </div>
                 </>
               )}
@@ -239,7 +243,7 @@ const OrderDetailsAdmin = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{editing ? "Edit" : "Add"} Order Detail</h5>
+                <h5 className="modal-title font-weight-bold">{editing ? "Cập nhật" : "Thêm"} Chi tiết đơn hàng</h5>
                 <button type="button" className="close" onClick={closeModal}>
                   <span>&times;</span>
                 </button>
@@ -248,27 +252,29 @@ const OrderDetailsAdmin = () => {
                 <div className="modal-body">
                   {error && <div className="alert alert-danger">{error}</div>}
                   <div className="form-group">
-                    <label>OrderId</label>
+                    <label>Mã đơn hàng (OrderId)</label>
                     <input
                       type="number"
                       className="form-control"
                       value={formData.orderId}
                       onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
                       required
+                      placeholder="VD: 101"
                     />
                   </div>
                   <div className="form-group">
-                    <label>ProductId</label>
+                    <label>Mã sản phẩm (ProductId)</label>
                     <input
                       type="number"
                       className="form-control"
                       value={formData.productId}
                       onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
                       required
+                      placeholder="VD: 5"
                     />
                   </div>
                   <div className="form-group">
-                    <label>Quantity</label>
+                    <label>Số lượng</label>
                     <input
                       type="number"
                       className="form-control"
@@ -279,7 +285,7 @@ const OrderDetailsAdmin = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>UnitPrice</label>
+                    <label>Đơn giá (VND)</label>
                     <input
                       type="number"
                       className="form-control"
@@ -291,10 +297,10 @@ const OrderDetailsAdmin = () => {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
+                    Hủy bỏ
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editing ? "Update" : "Create"}
+                    {editing ? "Lưu thay đổi" : "Tạo ngay"}
                   </button>
                 </div>
               </form>

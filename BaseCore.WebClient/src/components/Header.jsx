@@ -71,8 +71,21 @@ const Header = () => {
   const navClass = (path) => (location.pathname === path ? "active" : "");
 
   return (
-    <header className="header-section">
-      <div className="header-top">
+    <header
+      className="header-section"
+      style={{
+        background: "linear-gradient(to bottom, #e7ab3c 0%, #ffce74ff 100%)",
+        color: "#fff",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+      }}
+    >
+      <div
+        className="header-top"
+        style={{
+          background: "transparent",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
         <div className="container">
           <div className="row align-items-center">
             <div className="col-lg-6 col-md-6">
@@ -182,8 +195,11 @@ const Header = () => {
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                   />
-                  <button type="submit">
-                    <i className="ti-search"></i>
+                  <button
+                    type="submit"
+                    style={{ background: "#c08d32", border: "none" }}
+                  >
+                    <i className="ti-search" style={{ color: "#fff" }}></i>
                   </button>
                 </div>
               </form>
@@ -198,7 +214,15 @@ const Header = () => {
                 <li className="cart-icon">
                   <Link to="/shopping-cart" title="Giỏ hàng">
                     <i className="icon_bag_alt"></i>
-                    <span>{cartCount}</span>
+                    <span
+                      style={{
+                        background: "#222",
+                        border: "none",
+                        color: "#fff",
+                      }}
+                    >
+                      {cartCount}
+                    </span>
                   </Link>
                   <div className="cart-hover">
                     <div className="select-total">

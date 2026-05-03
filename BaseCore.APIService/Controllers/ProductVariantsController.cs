@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
 using BaseCore.Entities;
 using BaseCore.Repository.EFCore;
 
@@ -23,16 +25,41 @@ public class ProductVariantsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int? productId)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string keyword = "",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] int? productId = null)
     {
+        Expression<Func<ProductVariant, bool>>? filter = null;
+        
+        // Priority to explicit productId, then fallback to keyword
         if (productId.HasValue)
         {
-            var variantItems = await _variantRepository.GetByProductIdAsync(productId.Value);
-            return Ok(variantItems);
+            filter = v => v.ProductId == productId.Value;
+        }
+        else if (!string.IsNullOrWhiteSpace(keyword) && int.TryParse(keyword, out var n) && n > 0)
+        {
+            filter = v => v.ProductId == n;
         }
 
-        var items = await _variantRepository.GetAllAsync();
-        return Ok(items);
+        Expression<Func<ProductVariant, object>> orderBy = v => (object)v.Id;
+
+        var (items, totalCount) = await _variantRepository.GetPagedAsync(
+            page,
+            pageSize,
+            filter,
+            orderBy,
+            descending: false);
+
+        return Ok(new
+        {
+            items,
+            totalCount,
+            page,
+            pageSize,
+            totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+        });
     }
 
     [HttpGet("{id}")]

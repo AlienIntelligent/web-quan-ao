@@ -163,7 +163,7 @@ const Users = () => {
                 <div className="container-fluid">
                     <div className="row mb-2">
                         <div className="col-sm-6">
-                            <h1 className="m-0">Users Management</h1>
+                            <h1 className="m-0">Quản lý Người dùng</h1>
                         </div>
                     </div>
                 </div>
@@ -179,18 +179,18 @@ const Users = () => {
                                         <input
                                             type="text"
                                             className="form-control mr-2"
-                                            placeholder="Search by name, email, phone..."
+                                            placeholder="Tìm kiếm tên, email, SĐT..."
                                             value={keyword}
                                             onChange={(e) => setKeyword(e.target.value)}
                                         />
                                         <button type="submit" className="btn btn-primary">
-                                            <i className="fas fa-search"></i> Search
+                                            <i className="fas fa-search"></i> Tìm kiếm
                                         </button>
                                     </form>
                                 </div>
                                 <div className="col-md-6 text-right">
                                     <button className="btn btn-success" onClick={() => openModal()}>
-                                        <i className="fas fa-plus"></i> Add User
+                                        <i className="fas fa-plus"></i> Thêm người dùng
                                     </button>
                                 </div>
                             </div>
@@ -199,43 +199,44 @@ const Users = () => {
                             {loading ? (
                                 <div className="text-center py-5">
                                     <div className="spinner-border text-primary"></div>
+                                    <div className="mt-2">Đang tải dữ liệu...</div>
                                 </div>
                             ) : (
                                 <>
-                                    <table className="table table-bordered table-striped">
+                                    <table className="table table-hover">
                                         <thead>
                                             <tr>
-                                                <th>Username</th>
-                                                <th>Name</th>
+                                                <th>Tên đăng nhập</th>
+                                                <th>Họ tên</th>
                                                 <th>Email</th>
-                                                <th>Phone</th>
-                                                <th>Role</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
+                                                <th>Điện thoại</th>
+                                                <th>Vai trò</th>
+                                                <th>Trạng thái</th>
+                                                <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {users.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan="7" className="text-center">
-                                                        No users found
+                                                    <td colSpan="7" className="text-center py-4">
+                                                        Không tìm thấy người dùng nào
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 users.map(user => (
                                                     <tr key={user.id}>
-                                                        <td>{user.username}</td>
+                                                        <td className="font-weight-bold">{user.username}</td>
                                                         <td>{user.name}</td>
                                                         <td>{user.email}</td>
                                                         <td>{user.phone}</td>
                                                         <td>
                                                             <span className={`badge ${user.userType === 1 ? 'badge-danger' : 'badge-info'}`}>
-                                                                {user.userType === 1 ? 'Admin' : 'User'}
+                                                                {user.userType === 1 ? 'Quản trị viên' : 'Khách hàng'}
                                                             </span>
                                                         </td>
                                                         <td>
                                                             <span className={`badge ${user.isActive ? 'badge-success' : 'badge-secondary'}`}>
-                                                                {user.isActive ? 'Active' : 'Inactive'}
+                                                                {user.isActive ? 'Hoạt động' : 'Tạm khóa'}
                                                             </span>
                                                         </td>
                                                         <td>
@@ -243,7 +244,7 @@ const Users = () => {
                                                                 <button
                                                                     className="btn btn-sm btn-success mr-1"
                                                                     onClick={() => handleApprove(user)}
-                                                                    title="Approve registration"
+                                                                    title="Duyệt tài khoản"
                                                                 >
                                                                     <i className="fas fa-check"></i>
                                                                 </button>
@@ -251,12 +252,14 @@ const Users = () => {
                                                             <button
                                                                 className="btn btn-sm btn-info mr-1"
                                                                 onClick={() => openModal(user)}
+                                                                title="Chỉnh sửa"
                                                             >
                                                                 <i className="fas fa-edit"></i>
                                                             </button>
                                                             <button
                                                                 className="btn btn-sm btn-danger"
                                                                 onClick={() => handleDelete(user.id)}
+                                                                title="Xóa"
                                                             >
                                                                 <i className="fas fa-trash"></i>
                                                             </button>
@@ -267,19 +270,19 @@ const Users = () => {
                                         </tbody>
                                     </table>
 
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <span>Total: {totalCount} users</span>
+                                    <div className="d-flex justify-content-between align-items-center mt-3">
+                                        <span className="text-muted">Tổng cộng: <strong>{totalCount}</strong> người dùng</span>
                                         <nav>
                                             <ul className="pagination mb-0">
                                                 <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
                                                     <button className="page-link" onClick={() => setPage(page - 1)}>
-                                                        Previous
+                                                        <i className="fas fa-chevron-left"></i> Trước
                                                     </button>
                                                 </li>
                                                 {renderPagination()}
                                                 <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
                                                     <button className="page-link" onClick={() => setPage(page + 1)}>
-                                                        Next
+                                                        Sau <i className="fas fa-chevron-right"></i>
                                                     </button>
                                                 </li>
                                             </ul>
@@ -298,8 +301,8 @@ const Users = () => {
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h5 className="modal-title">
-                                    {editingUser ? 'Edit User' : 'Add User'}
+                                <h5 className="modal-title font-weight-bold">
+                                    {editingUser ? 'Cập nhật thông tin' : 'Tạo người dùng mới'}
                                 </h5>
                                 <button type="button" className="close" onClick={closeModal}>
                                     <span>&times;</span>
@@ -309,7 +312,7 @@ const Users = () => {
                                 <div className="modal-body">
                                     {error && <div className="alert alert-danger">{error}</div>}
                                     <div className="form-group">
-                                        <label>Username</label>
+                                        <label>Tên đăng nhập</label>
                                         <input
                                             type="text"
                                             className="form-control"
@@ -317,25 +320,28 @@ const Users = () => {
                                             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                             required
                                             disabled={!!editingUser}
+                                            placeholder="VD: admin_01"
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Password {editingUser && '(leave blank to keep current)'}</label>
+                                        <label>Mật khẩu {editingUser && '(để trống nếu không đổi)'}</label>
                                         <input
                                             type="password"
                                             className="form-control"
                                             value={formData.password}
                                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                             required={!editingUser}
+                                            placeholder="Nhập mật khẩu..."
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Name</label>
+                                        <label>Họ và tên</label>
                                         <input
                                             type="text"
                                             className="form-control"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="VD: Nguyễn Văn A"
                                         />
                                     </div>
                                     <div className="form-group">
@@ -345,35 +351,38 @@ const Users = () => {
                                             className="form-control"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="example@gmail.com"
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Phone</label>
+                                        <label>Số điện thoại</label>
                                         <input
                                             type="text"
                                             className="form-control"
                                             value={formData.phone}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            placeholder="09xx xxx xxx"
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Position</label>
+                                        <label>Chức vụ / Vị trí</label>
                                         <input
                                             type="text"
                                             className="form-control"
                                             value={formData.position}
                                             onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                                            placeholder="VD: Nhân viên kho"
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Role</label>
+                                        <label>Vai trò hệ thống</label>
                                         <select
                                             className="form-control"
                                             value={formData.userType}
                                             onChange={(e) => setFormData({ ...formData, userType: e.target.value })}
                                         >
-                                            <option value="0">User</option>
-                                            <option value="1">Admin</option>
+                                            <option value="0">Khách hàng / Nhân viên</option>
+                                            <option value="1">Quản trị viên</option>
                                         </select>
                                     </div>
                                     {editingUser && (
@@ -386,17 +395,17 @@ const Users = () => {
                                                     checked={formData.isActive}
                                                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                                                 />
-                                                <label className="custom-control-label" htmlFor="isActive">Active</label>
+                                                <label className="custom-control-label" htmlFor="isActive">Trạng thái kích hoạt</label>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 <div className="modal-footer">
                                     <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                                        Cancel
+                                        Hủy bỏ
                                     </button>
                                     <button type="submit" className="btn btn-primary">
-                                        {editingUser ? 'Update' : 'Create'}
+                                        {editingUser ? 'Lưu thay đổi' : 'Tạo ngay'}
                                     </button>
                                 </div>
                             </form>

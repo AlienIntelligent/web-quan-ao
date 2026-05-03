@@ -62,7 +62,9 @@ const CartDetailsAdmin = () => {
         productId: cd.productId ?? "",
         quantity: cd.quantity ?? 1,
         unitPrice: cd.unitPrice ?? 0,
-        updatedAt: cd.updatedAt ? new Date(cd.updatedAt).toISOString().slice(0, 10) : "",
+        updatedAt: cd.updatedAt
+          ? new Date(cd.updatedAt).toISOString().slice(0, 10)
+          : "",
       });
     } else {
       setEditing(null);
@@ -103,110 +105,158 @@ const CartDetailsAdmin = () => {
       await loadItems(1);
       setPage(1);
     } catch (err) {
-      setError(err.response?.data?.message || "Operation failed");
+      setError(err.response?.data?.message || "Thao tác thất bại");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this cart detail?")) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa chi tiết giỏ hàng này?"))
+      return;
     try {
       await cartDetailApi.delete(id);
       await loadItems();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete");
+      alert(err.response?.data?.message || "Xóa thất bại");
     }
-  };
-
-  const renderPagination = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i += 1) {
-      pages.push(
-        <li key={i} className={`page-item ${page === i ? "active" : ""}`}>
-          <button className="page-link" onClick={() => setPage(i)}>
-            {i}
-          </button>
-        </li>
-      );
-    }
-    return pages;
   };
 
   return (
     <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Cart Details Management</h1>
+          <h1 className="m-0 text-dark">Quản lý Giỏ hàng</h1>
         </div>
       </div>
 
       <section className="content">
         <div className="container-fluid">
           <div className="card">
-            <div className="card-header">
+            <div className="card-header border-0 bg-white">
               <form onSubmit={handleSearch} className="form-inline">
-                <input
-                  className="form-control mr-2"
-                  placeholder="Keyword (UserId contains / ProductId)"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                />
-                <button className="btn btn-primary" type="submit">
-                  Search
+                <div className="input-group">
+                  <div className="input-group-prepend">
+                    <span className="input-group-text bg-white">
+                      <i className="fas fa-search"></i>
+                    </span>
+                  </div>
+                  <input
+                    className="form-control"
+                    placeholder="Tìm theo Mã người dùng / Mã sản phẩm..."
+                    style={{ width: "300px" }}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary ml-2 shadow-sm"
+                  type="submit"
+                >
+                  Tìm kiếm
                 </button>
               </form>
             </div>
 
-            <div className="card-body">
+            <div className="card-body p-0">
               {loading ? (
-                <div className="text-center py-5">Loading...</div>
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary"></div>
+                  <div className="mt-2 text-muted">Đang tải dữ liệu...</div>
+                </div>
               ) : (
                 <>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span>Total: {totalCount}</span>
+                  <div className="px-4 py-3 d-flex justify-content-between align-items-center bg-light">
+                    <span className="text-muted font-weight-bold">
+                      Tổng số bản ghi: {totalCount}
+                    </span>
                     {isAdmin() && (
-                      <button className="btn btn-success btn-sm" onClick={() => openModal()}>
-                        Add
+                      <button
+                        className="btn btn-success shadow-sm btn-sm"
+                        onClick={() => openModal()}
+                      >
+                        <i className="fas fa-plus mr-1"></i> Thêm mới
                       </button>
                     )}
                   </div>
 
-                  <table className="table table-bordered table-striped">
-                    <thead>
+                  <table className="table table-hover table-valign-middle mb-0">
+                    <thead className="thead-light">
                       <tr>
-                        <th>ID</th>
-                        <th>UserId</th>
-                        <th>Product</th>
-                        <th>Qty</th>
-                        <th>UnitPrice</th>
-                        <th>CreatedAt</th>
-                        {isAdmin() && <th>Actions</th>}
+                        <th style={{ width: "80px" }}>ID</th>
+                        <th>Khách hàng (User ID)</th>
+                        <th>Sản phẩm</th>
+                        <th className="text-center">Số lượng</th>
+                        <th className="text-right">Đơn giá</th>
+                        <th>Ngày cập nhật</th>
+                        {isAdmin() && <th className="text-right">Hành động</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin() ? 8 : 7} className="text-center">
-                            No data found
+                          <td
+                            colSpan={isAdmin() ? 7 : 6}
+                            className="text-center py-5"
+                          >
+                            <i className="fas fa-shopping-basket fa-3x text-muted mb-3 d-block"></i>
+                            Không có dữ liệu giỏ hàng nào.
                           </td>
                         </tr>
                       ) : (
                         items.map((cd) => (
                           <tr key={cd.id}>
-                            <td>{cd.id}</td>
-                            <td>{cd.userId}</td>
                             <td>
-                              {cd.productId} - {cd.productName}
+                              <strong>#{cd.id}</strong>
                             </td>
-                            <td>{cd.quantity}</td>
-                            <td>{cd.unitPrice}</td>
-                            <td>{cd.createdAt ? new Date(cd.createdAt).toLocaleString() : ""}</td>
+                            <td>
+                              <div className="text-primary font-weight-bold">
+                                {cd.userId}
+                              </div>
+                            </td>
+                            <td>
+                              <div className="font-weight-bold">
+                                {cd.productName}
+                              </div>
+                              <small className="text-muted">
+                                Mã SP: {cd.productId}
+                              </small>
+                            </td>
+                            <td className="text-center">
+                              <span className="badge badge-secondary p-2">
+                                {cd.quantity}
+                              </span>
+                            </td>
+                            <td className="text-right font-weight-bold">
+                              {cd.unitPrice?.toLocaleString()} VND
+                            </td>
+                            <td>
+                              <div className="small">
+                                {cd.createdAt
+                                  ? new Date(cd.createdAt).toLocaleDateString(
+                                      "vi-VN",
+                                    )
+                                  : ""}
+                              </div>
+                              <small className="text-muted">
+                                {cd.createdAt
+                                  ? new Date(cd.createdAt).toLocaleTimeString(
+                                      "vi-VN",
+                                    )
+                                  : ""}
+                              </small>
+                            </td>
                             {isAdmin() && (
-                              <td>
-                                <button className="btn btn-sm btn-info mr-1" onClick={() => openModal(cd)}>
-                                  Edit
+                              <td className="text-right">
+                                <button
+                                  className="btn btn-sm btn-outline-info mr-2"
+                                  onClick={() => openModal(cd)}
+                                >
+                                  <i className="fas fa-edit"></i> Sửa
                                 </button>
-                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(cd.id)}>
-                                  Delete
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDelete(cd.id)}
+                                >
+                                  <i className="fas fa-trash"></i> Xóa
                                 </button>
                               </td>
                             )}
@@ -216,27 +266,28 @@ const CartDetailsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <button
-                        className="btn btn-outline-secondary btn-sm mr-2"
-                        disabled={page <= 1}
-                        onClick={() => setPage((p) => p - 1)}
-                      >
-                        Prev
-                      </button>
-                      <span>
-                        {page}/{totalPages}
+                  <div className="card-footer clearfix bg-white">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span className="text-muted small">
+                        Trang {page} trên {totalPages}
                       </span>
-                      <button
-                        className="btn btn-outline-secondary btn-sm ml-2"
-                        disabled={page >= totalPages}
-                        onClick={() => setPage((p) => p + 1)}
-                      >
-                        Next
-                      </button>
+                      <div className="pagination-container">
+                        <button
+                          className="btn btn-outline-secondary btn-sm mr-2"
+                          disabled={page <= 1}
+                          onClick={() => setPage((p) => p - 1)}
+                        >
+                          <i className="fas fa-chevron-left"></i>
+                        </button>
+                        <button
+                          className="btn btn-outline-secondary btn-sm"
+                          disabled={page >= totalPages}
+                          onClick={() => setPage((p) => p + 1)}
+                        >
+                          <i className="fas fa-chevron-right"></i>
+                        </button>
+                      </div>
                     </div>
-                    <ul className="pagination mb-0">{renderPagination()}</ul>
                   </div>
                 </>
               )}
@@ -246,12 +297,25 @@ const CartDetailsAdmin = () => {
       </section>
 
       {showModal && (
-        <div className="modal fade show" style={{ display: "block" }} tabIndex="-1">
+        <div
+          className="modal fade show"
+          style={{ display: "block" }}
+          tabIndex="-1"
+        >
           <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">{editing ? "Edit" : "Add"} Cart Detail</h5>
-                <button type="button" className="close" onClick={closeModal}>
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header bg-dark text-white">
+                <h5 className="modal-title font-weight-bold">
+                  <i
+                    className={`fas ${editing ? "fa-edit" : "fa-plus-circle"} mr-2`}
+                  ></i>
+                  {editing ? "Chỉnh sửa" : "Thêm mới"} Giỏ hàng tạm
+                </h5>
+                <button
+                  type="button"
+                  className="close text-white"
+                  onClick={closeModal}
+                >
                   <span>&times;</span>
                 </button>
               </div>
@@ -259,61 +323,94 @@ const CartDetailsAdmin = () => {
                 <div className="modal-body">
                   {error && <div className="alert alert-danger">{error}</div>}
                   <div className="form-group">
-                    <label>UserId</label>
+                    <label className="font-weight-bold">
+                      Mã người dùng (User ID)
+                    </label>
                     <input
                       className="form-control"
+                      placeholder="VD: user123"
                       value={formData.userId}
-                      onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, userId: e.target.value })
+                      }
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label>ProductId</label>
+                    <label className="font-weight-bold">
+                      Mã sản phẩm (Product ID)
+                    </label>
                     <input
                       type="number"
                       className="form-control"
                       value={formData.productId}
-                      onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, productId: e.target.value })
+                      }
                       required
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Quantity</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                      required
-                      min="1"
-                    />
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label className="font-weight-bold">Số lượng</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.quantity}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              quantity: e.target.value,
+                            })
+                          }
+                          required
+                          min="1"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-group">
+                        <label className="font-weight-bold">Đơn giá</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={formData.unitPrice}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              unitPrice: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div className="form-group">
-                    <label>UnitPrice</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.unitPrice}
-                      onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>UpdatedAt (optional)</label>
+                    <label className="font-weight-bold">
+                      Ngày cập nhật (Tùy chọn)
+                    </label>
                     <input
                       type="date"
                       className="form-control"
                       value={formData.updatedAt}
-                      onChange={(e) => setFormData({ ...formData, updatedAt: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, updatedAt: e.target.value })
+                      }
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
+                <div className="modal-footer bg-light">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeModal}
+                  >
+                    Hủy bỏ
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    {editing ? "Update" : "Create"}
+                  <button type="submit" className="btn btn-primary shadow-sm">
+                    {editing ? "Cập nhật" : "Lưu lại"}
                   </button>
                 </div>
               </form>
@@ -327,4 +424,3 @@ const CartDetailsAdmin = () => {
 };
 
 export default CartDetailsAdmin;
-

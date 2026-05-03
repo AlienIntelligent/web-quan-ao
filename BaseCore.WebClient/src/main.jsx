@@ -12,6 +12,7 @@ import "./assets/css/nice-select.css";
 import "./assets/css/jquery-ui.min.css";
 import "./assets/css/slicknav.min.css";
 import "./assets/css/style.css"; // CSS riêng của Fashi
+import "./assets/css/admin-custom.css"; // Tùy chỉnh Admin
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

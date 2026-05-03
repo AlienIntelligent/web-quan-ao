@@ -27,7 +27,8 @@ namespace BaseCore.Repository.EFCore
             int pageSize,
             Expression<Func<T, bool>>? filter = null,
             Expression<Func<T, object>>? orderBy = null,
-            bool descending = false);
+            bool descending = false,
+            params Expression<Func<T, object>>[] includes);
     }
 }
 

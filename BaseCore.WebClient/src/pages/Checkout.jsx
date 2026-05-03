@@ -47,8 +47,9 @@ const Checkout = () => {
   }, []);
   const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);
   const shipping = cartItems.length ? 30000 : 0;
+  const vat = Math.round(subtotal * 0.08);
   const discount = appliedCoupon?.discountAmount || 0;
-  const total = Math.max(0, subtotal + shipping - discount);
+  const total = Math.max(0, subtotal + shipping + vat - discount);
 
   useEffect(() => {
     const fetchPromotions = async () => {
@@ -159,7 +160,7 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const currentCartItems = cartStorage.getItems();
+    const currentCartItems = cartItems;
     if (!isAuthenticated) {
       alertError("Chưa đăng nhập!", "Bạn cần đăng nhập để thực hiện đặt hàng.");
       return;
@@ -282,6 +283,7 @@ const Checkout = () => {
                       ))}
                       <li className="fw-normal">Tạm tính <span>{formatMoney(subtotal)}</span></li>
                       <li className="fw-normal">Vận chuyển <span>{formatMoney(shipping)}</span></li>
+                      <li className="fw-normal">Thuế VAT (8%) <span>{formatMoney(vat)}</span></li>
                       {appliedCoupon && <li className="fw-normal">Giảm giá <span>-{formatMoney(discount)}</span></li>}
                       <li className="total-price">Tổng cộng <span>{formatMoney(total)}</span></li>
                     </ul>

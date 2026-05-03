@@ -32,14 +32,20 @@ namespace BaseCore.Repository.EFCore
             int page,
             int pageSize)
         {
-            var query = _dbSet.Include(p => p.Category).AsQueryable();
+            var query = _dbSet
+                .Include(p => p.Category)
+                .Include(p => p.ProductOrigin)
+                    .ThenInclude(po => po.Origin)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
             {
                 keyword = keyword.ToLower();
                 query = query.Where(p =>
                     p.Name.ToLower().Contains(keyword) ||
-                    (p.Description != null && p.Description.ToLower().Contains(keyword)));
+                    (p.Description != null && p.Description.ToLower().Contains(keyword)) ||
+                    p.Category.Name.ToLower().Contains(keyword) ||
+                    (p.ProductOrigin != null && p.ProductOrigin.Origin.Name.ToLower().Contains(keyword)));
             }
 
             if (categoryId.HasValue && categoryId > 0)

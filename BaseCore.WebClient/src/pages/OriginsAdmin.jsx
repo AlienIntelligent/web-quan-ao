@@ -134,7 +134,7 @@ const OriginsAdmin = () => {
     <div className="content-wrapper">
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">Origins Management</h1>
+          <h1 className="m-0">Quản lý Xuất xứ</h1>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ const OriginsAdmin = () => {
               <form onSubmit={handleSearch} className="form-inline">
                 <input
                   className="form-control mr-2"
-                  placeholder="Search by name"
+                  placeholder="Tìm theo tên..."
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                 />
@@ -154,63 +154,70 @@ const OriginsAdmin = () => {
                   value={isActive}
                   onChange={(e) => setIsActive(e.target.value)}
                 >
-                  <option value="">All</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="">Tất cả</option>
+                  <option value="true">Đang hoạt động</option>
+                  <option value="false">Tạm khóa</option>
                 </select>
                 <button className="btn btn-primary" type="submit">
-                  Search
+                  <i className="fas fa-search"></i> Tìm kiếm
                 </button>
               </form>
             </div>
 
             <div className="card-body">
               {loading ? (
-                <div className="text-center py-5">Loading...</div>
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary"></div>
+                  <div className="mt-2">Đang tải dữ liệu...</div>
+                </div>
               ) : (
                 <>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span>Total: {totalCount}</span>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <span className="text-muted">Tổng số: <strong>{totalCount}</strong> bản ghi</span>
                     {isAdmin() && (
                       <button className="btn btn-success btn-sm" onClick={() => openModal()}>
-                        Add Origin
+                        <i className="fas fa-plus"></i> Thêm Xuất xứ
                       </button>
                     )}
                   </div>
 
-                  <table className="table table-bordered table-striped">
+                  <table className="table table-hover">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Active</th>
-                        <th>Created At</th>
-                        {isAdmin() && <th>Actions</th>}
+                        <th style={{ width: '80px' }}>ID</th>
+                        <th>Tên xuất xứ</th>
+                        <th>Mô tả</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        {isAdmin() && <th>Thao tác</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin() ? 6 : 5} className="text-center">
-                            No origins found
+                          <td colSpan={isAdmin() ? 6 : 5} className="text-center py-4">
+                            Không tìm thấy dữ liệu nào
                           </td>
                         </tr>
                       ) : (
                         items.map((o) => (
                           <tr key={o.id}>
                             <td>{o.id}</td>
-                            <td>{o.name}</td>
+                            <td className="font-weight-bold text-primary">{o.name}</td>
                             <td>{o.description}</td>
-                            <td>{o.isActive ? "Active" : "Inactive"}</td>
+                            <td>
+                                <span className={`badge ${o.isActive ? 'badge-success' : 'badge-secondary'}`}>
+                                    {o.isActive ? "Hoạt động" : "Tạm khóa"}
+                                </span>
+                            </td>
                             <td>{o.createdAt ? new Date(o.createdAt).toLocaleString() : ""}</td>
                             {isAdmin() && (
                               <td>
-                                <button className="btn btn-sm btn-info mr-1" onClick={() => openModal(o)}>
-                                  Edit
+                                <button className="btn btn-sm btn-info mr-1" onClick={() => openModal(o)} title="Sửa">
+                                  <i className="fas fa-edit"></i>
                                 </button>
-                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(o.id)}>
-                                  Delete
+                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(o.id)} title="Xóa">
+                                  <i className="fas fa-trash"></i>
                                 </button>
                               </td>
                             )}
@@ -220,27 +227,26 @@ const OriginsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <div className="pagination-container">
                       <button
-                        className="btn btn-outline-secondary btn-sm mr-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page <= 1}
                         onClick={() => setPage((p) => p - 1)}
                       >
-                        Prev
+                        <i className="fas fa-chevron-left"></i> Trước
                       </button>
-                      <span>
-                        {page}/{totalPages}
+                      <span className="mx-3 font-weight-bold">
+                        {page} / {totalPages}
                       </span>
                       <button
-                        className="btn btn-outline-secondary btn-sm ml-2"
+                        className="btn btn-outline-secondary btn-sm"
                         disabled={page >= totalPages}
                         onClick={() => setPage((p) => p + 1)}
                       >
-                        Next
+                        Sau <i className="fas fa-chevron-right"></i>
                       </button>
                     </div>
-                    <ul className="pagination mb-0">{renderPagination()}</ul>
                   </div>
                 </>
               )}
@@ -254,7 +260,7 @@ const OriginsAdmin = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{editing ? "Edit Origin" : "Add Origin"}</h5>
+                <h5 className="modal-title font-weight-bold">{editing ? "Cập nhật Xuất xứ" : "Thêm Xuất xứ mới"}</h5>
                 <button type="button" className="close" onClick={closeModal}>
                   <span>&times;</span>
                 </button>
@@ -263,37 +269,44 @@ const OriginsAdmin = () => {
                 <div className="modal-body">
                   {error && <div className="alert alert-danger">{error}</div>}
                   <div className="form-group">
-                    <label>Name</label>
+                    <label>Tên xuất xứ</label>
                     <input
                       className="form-control"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      placeholder="VD: Việt Nam, Mỹ, Nhật Bản..."
                     />
                   </div>
                   <div className="form-group">
-                    <label>Description</label>
-                    <input
+                    <label>Mô tả chi tiết</label>
+                    <textarea
                       className="form-control"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Nhập mô tả chi tiết về xuất xứ..."
+                      rows="3"
                     />
                   </div>
                   <div className="form-group">
-                    <label className="mr-2">Active</label>
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    />
+                    <div className="custom-control custom-switch">
+                      <input
+                        type="checkbox"
+                        className="custom-control-input"
+                        id="isActiveOrigin"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      />
+                      <label className="custom-control-label" htmlFor="isActiveOrigin">Kích hoạt</label>
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
+                    Hủy bỏ
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editing ? "Update" : "Create"}
+                    {editing ? "Lưu thay đổi" : "Tạo ngay"}
                   </button>
                 </div>
               </form>

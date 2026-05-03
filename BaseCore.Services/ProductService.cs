@@ -65,20 +65,20 @@ namespace BaseCore.Services
             var result = await _productRepository.GetPagedAsync(
                 page, 
                 pageSize, 
-                p => (string.IsNullOrEmpty(keyword) || p.Name.Contains(keyword) || p.Description.Contains(keyword)) &&
+                p => (string.IsNullOrEmpty(keyword) || 
+                      p.Name.Contains(keyword) || 
+                      p.Description.Contains(keyword) ||
+                      p.Category.Name.Contains(keyword) ||
+                      (p.ProductOrigin != null && p.ProductOrigin.Origin.Name.Contains(keyword))) &&
                      (!categoryId.HasValue || p.CategoryId == categoryId.Value) &&
                      (!minPrice.HasValue || p.Price >= minPrice.Value) &&
                      (!maxPrice.HasValue || p.Price <= maxPrice.Value),
                 p => p.Id,
-                true);
+                true,
+                p => p.Category,
+                p => p.ProductOrigin.Origin);
 
             var products = result.Items.ToList();
-
-            // Load categories
-            foreach (var product in products)
-            {
-                product.Category = await _categoryRepository.GetByIdAsync(product.CategoryId);
-            }
 
             return (products, result.TotalCount);
         }
