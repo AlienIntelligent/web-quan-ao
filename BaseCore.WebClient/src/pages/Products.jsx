@@ -27,6 +27,7 @@ const Products = () => {
         description: '',
         imageUrl: '',
         categoryId: '',
+        originalPrice: 0,
     });
 
     // Related data states
@@ -120,6 +121,7 @@ const Products = () => {
                 description: product.description || '',
                 imageUrl: product.imageUrl || '',
                 categoryId: product.categoryId,
+                originalPrice: product.originalPrice || 0,
             });
             loadRelatedData(product.id);
         } else {
@@ -131,6 +133,7 @@ const Products = () => {
                 description: '',
                 imageUrl: '',
                 categoryId: categories[0]?.id || '',
+                originalPrice: 0,
             });
             setVariants([]);
             setProductOrigins([]);
@@ -154,6 +157,7 @@ const Products = () => {
                 price: parseFloat(formData.price),
                 stock: parseInt(formData.stock),
                 categoryId: parseInt(formData.categoryId),
+                originalPrice: parseFloat(formData.originalPrice),
             };
 
             if (editingProduct) {
@@ -237,29 +241,28 @@ const Products = () => {
         <div className="content-wrapper">
             <div className="content-header">
                 <div className="container-fluid">
-                    <h1 className="m-0 text-dark">Quản lý Sản phẩm</h1>
+                    <div className="row mb-2">
+                        <div className="col-sm-6">
+                            <h1 className="m-0">Quản lý Sản phẩm</h1>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <section className="content">
                 <div className="container-fluid">
                     <div className="card">
-                        <div className="card-header border-0 bg-white">
-                            <div className="row align-items-center">
+                        <div className="card-header">
+                            <div className="row">
                                 <div className="col-md-9">
                                     <form onSubmit={handleSearch} className="form-inline">
-                                        <div className="input-group mr-2">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text bg-white border-right-0"><i className="fas fa-search text-muted"></i></span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                className="form-control border-left-0"
-                                                placeholder="Tìm tên sản phẩm..."
-                                                value={keyword}
-                                                onChange={(e) => setKeyword(e.target.value)}
-                                            />
-                                        </div>
+                                        <input
+                                            type="text"
+                                            className="form-control mr-2"
+                                            placeholder="Tìm tên sản phẩm..."
+                                            value={keyword}
+                                            onChange={(e) => setKeyword(e.target.value)}
+                                        />
                                         <select
                                             className="form-control mr-2"
                                             value={categoryId}
@@ -270,15 +273,15 @@ const Products = () => {
                                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
-                                        <button type="submit" className="btn btn-primary shadow-sm">
-                                            Lọc dữ liệu
+                                        <button type="submit" className="btn btn-primary">
+                                            <i className="fas fa-search"></i> Tìm
                                         </button>
                                     </form>
                                 </div>
                                 <div className="col-md-3 text-right">
                                     {isAdmin() && (
-                                        <button className="btn btn-success shadow-sm" onClick={() => openModal()}>
-                                            <i className="fas fa-plus mr-1"></i> Thêm mới
+                                        <button className="btn btn-success" onClick={() => openModal()}>
+                                            <i className="fas fa-plus"></i> Thêm Sản phẩm
                                         </button>
                                     )}
                                 </div>
@@ -293,22 +296,22 @@ const Products = () => {
                             ) : (
                                 <>
                                     <table className="table table-hover table-valign-middle mb-0">
-                                        <thead className="thead-light">
+                                        <thead>
                                             <tr>
-                                                <th style={{ width: '80px' }}>ID</th>
-                                                <th>Hình ảnh</th>
+                                                <th style={{ width: '60px' }}>ID</th>
+                                                <th style={{ width: '60px' }}>Hình</th>
                                                 <th>Tên sản phẩm</th>
                                                 <th>Danh mục</th>
+                                                <th>Giá gốc</th>
                                                 <th>Giá bán</th>
                                                 <th>Kho</th>
-                                                {isAdmin() && <th className="text-right">Hành động</th>}
+                                                {isAdmin() && <th style={{ width: '140px' }}>Thao tác</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {products.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={isAdmin() ? 7 : 6} className="text-center py-5">
-                                                        <i className="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                                                    <td colSpan={isAdmin() ? 8 : 7} className="text-center py-4">
                                                         Chưa có sản phẩm nào
                                                     </td>
                                                 </tr>
@@ -317,36 +320,35 @@ const Products = () => {
                                                     <tr key={product.id}>
                                                         <td>{product.id}</td>
                                                         <td>
-                                                            <img 
-                                                                src={product.imageUrl || '/img/no-image.png'} 
-                                                                alt="" 
-                                                                style={{ width: '40px', height: '40px', objectFit: 'cover' }} 
-                                                                className="rounded shadow-sm"
+                                                            <img
+                                                                src={product.imageUrl || '/img/no-image.png'}
+                                                                alt=""
+                                                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                                                className="rounded"
                                                             />
                                                         </td>
-                                                        <td className="font-weight-bold">{product.name}</td>
+                                                        <td><strong>{product.name}</strong></td>
+                                                        <td>{product.category?.name}</td>
                                                         <td>
-                                                          <span className="badge badge-outline-primary">
-                                                            {product.category?.name}
-                                                          </span>
+                                                            <span className="text-muted" style={{ textDecoration: 'line-through' }}>
+                                                                {product.originalPrice?.toLocaleString()} đ
+                                                            </span>
                                                         </td>
                                                         <td>
-                                                            <span className="text-danger font-weight-bold">
-                                                                {product.price?.toLocaleString()} đ
-                                                            </span>
+                                                            <strong className="text-danger">{product.price?.toLocaleString()} đ</strong>
                                                         </td>
                                                         <td>{product.stock}</td>
                                                         {isAdmin() && (
-                                                            <td className="text-right">
+                                                            <td>
                                                                 <button
-                                                                    className="btn btn-sm btn-outline-info mr-1"
+                                                                    className="btn btn-sm btn-info mr-1"
                                                                     onClick={() => openModal(product)}
-                                                                    title="Chỉnh sửa & Kết nối"
+                                                                    title="Quản lý"
                                                                 >
-                                                                    <i className="fas fa-cog"></i> Quản lý
+                                                                    <i className="fas fa-cog"></i>
                                                                 </button>
                                                                 <button
-                                                                    className="btn btn-sm btn-outline-danger"
+                                                                    className="btn btn-sm btn-danger"
                                                                     onClick={() => handleDelete(product.id)}
                                                                     title="Xóa"
                                                                 >
@@ -360,25 +362,19 @@ const Products = () => {
                                         </tbody>
                                     </table>
 
-                                    <div className="card-footer bg-white clearfix">
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <span className="text-muted small">Tổng cộng: <strong>{totalCount}</strong> sản phẩm</span>
-                                            <nav>
-                                                <ul className="pagination pagination-sm mb-0">
-                                                    <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
-                                                        <button className="page-link" onClick={() => setPage(page - 1)}>
-                                                            <i className="fas fa-chevron-left"></i>
-                                                        </button>
-                                                    </li>
-                                                    {renderPagination()}
-                                                    <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
-                                                        <button className="page-link" onClick={() => setPage(page + 1)}>
-                                                            <i className="fas fa-chevron-right"></i>
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </nav>
-                                        </div>
+                                    <div className="d-flex justify-content-between align-items-center mt-3">
+                                        <span>Tổng: <strong>{totalCount}</strong> sản phẩm</span>
+                                        <nav>
+                                            <ul className="pagination mb-0">
+                                                <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => setPage(page - 1)}>Trước</button>
+                                                </li>
+                                                {renderPagination()}
+                                                <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
+                                                    <button className="page-link" onClick={() => setPage(page + 1)}>Sau</button>
+                                                </li>
+                                            </ul>
+                                        </nav>
                                     </div>
                                 </>
                             )}
@@ -467,9 +463,20 @@ const Products = () => {
                                             </div>
                                         </div>
                                         <div className="row">
-                                            <div className="col-md-6">
+                                            <div className="col-md-4">
                                                 <div className="form-group">
-                                                    <label className="small font-weight-bold text-uppercase">Giá bán chính (đ)</label>
+                                                    <label className="small font-weight-bold text-uppercase">Giá gốc (đ)</label>
+                                                    <input
+                                                        type="number"
+                                                        className="form-control"
+                                                        value={formData.originalPrice}
+                                                        onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="col-md-4">
+                                                <div className="form-group">
+                                                    <label className="small font-weight-bold text-uppercase">Giá bán (đ)</label>
                                                     <input
                                                         type="number"
                                                         className="form-control"
@@ -479,9 +486,9 @@ const Products = () => {
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="col-md-6">
+                                            <div className="col-md-4">
                                                 <div className="form-group">
-                                                    <label className="small font-weight-bold text-uppercase">Tổng kho mặc định</label>
+                                                    <label className="small font-weight-bold text-uppercase">Tổng kho</label>
                                                     <input
                                                         type="number"
                                                         className="form-control"

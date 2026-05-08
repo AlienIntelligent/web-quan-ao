@@ -9,7 +9,7 @@ namespace BaseCore.Repository.EFCore
     public interface ICartDetailRepository : IRepository<CartDetail>
     {
         Task<List<CartDetail>> GetByUserIdAsync(string userId);
-        Task<CartDetail?> GetByUserAndProductAsync(string userId, int productId);
+        Task<CartDetail?> GetByUserProductAndVariantAsync(string userId, int productId, int? variantId);
         Task<decimal> GetCartTotalAsync(string userId);
         Task<int> GetCartItemCountAsync(string userId);
         Task ClearCartAsync(string userId);
@@ -27,16 +27,20 @@ namespace BaseCore.Repository.EFCore
             return await _dbSet
                 .Where(c => c.UserId == userId)
                 .Include(c => c.Product)
-                .ThenInclude(p => p.Category)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.SizeNavigation)
+                .Include(c => c.ProductVariant)
+                    .ThenInclude(v => v.ColorNavigation)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<CartDetail?> GetByUserAndProductAsync(string userId, int productId)
+        public async Task<CartDetail?> GetByUserProductAndVariantAsync(string userId, int productId, int? variantId)
         {
             return await _dbSet
                 .Include(c => c.Product)
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId);
+                .Include(c => c.ProductVariant)
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
         }
 
         public async Task<decimal> GetCartTotalAsync(string userId)

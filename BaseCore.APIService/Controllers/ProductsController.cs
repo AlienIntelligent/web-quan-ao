@@ -32,6 +32,8 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] int? categoryId,
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice,
+            [FromQuery] int? sizeId,
+            [FromQuery] int? colorId,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
@@ -40,6 +42,8 @@ namespace BaseCore.APIService.Controllers
                 categoryId,
                 minPrice,
                 maxPrice,
+                sizeId,
+                colorId,
                 page,
                 pageSize);
 

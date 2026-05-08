@@ -71,6 +71,12 @@ export const productVariantApi = {
     delete: (id) => api.delete(`/product-variants/${id}`),
 };
 
+// Metadata API (Sizes/Colors)
+export const metadataApi = {
+    getSizes: () => api.get('/sizes'),
+    getColors: () => api.get('/colors'),
+};
+
 // Review API (rating/comment)
 export const reviewApi = {
     getByProductId: (productId, params = {}) =>
@@ -102,13 +108,29 @@ export const orderApi = {
     cancel: (id) => api.put(`/orders/${id}/cancel`),
 };
 
-// Cart API (New)
+// Cart API
 export const cartApi = {
     get: () => api.get('/cart'),
     add: (data) => api.post('/cart/add', data),
     update: (data) => api.put('/cart/update', data),
-    remove: (productId) => api.delete(`/cart/remove/${productId}`),
+    remove: (productId, variantId) => api.delete('/cart/remove', { params: { productId, variantId } }),
     clear: () => api.delete('/cart/clear'),
+};
+
+// Wishlist API
+export const wishlistApi = {
+    get: () => api.get('/wishlist'),
+    add: (productId, variantId) => api.post('/wishlist/add', { productId, variantId }),
+    remove: (productId, variantId) => api.delete('/wishlist/remove', { params: { productId, variantId } }),
+    check: (productId, variantId) => api.get('/wishlist/check', { params: { productId, variantId } }),
+    clear: () => api.delete('/wishlist/clear'),
+};
+
+// Analytics API
+export const analyticsApi = {
+    getStats: () => api.get('/analytics/stats'),
+    getRevenue: (start, end) => api.get('/analytics/revenue', { params: { start, end } }),
+    getBestSellers: (top = 5) => api.get('/analytics/best-sellers', { params: { top } }),
 };
 
 // Origin API
@@ -139,7 +161,7 @@ export const shippingApi = {
     delete: (id) => api.delete(`/shippings/${id}`),
 };
 
-// Product-Origin API (join)
+// Product-Origin API
 export const productOriginApi = {
     getAll: (params) => api.get('/product-origins', { params }),
     getById: (id) => api.get(`/product-origins/${id}`),
@@ -148,7 +170,7 @@ export const productOriginApi = {
     delete: (id) => api.delete(`/product-origins/${id}`),
 };
 
-// Order-Detail API (join)
+// Order-Detail API
 export const orderDetailApi = {
     getAll: (params) => api.get('/order-details', { params }),
     getById: (id) => api.get(`/order-details/${id}`),
@@ -157,7 +179,7 @@ export const orderDetailApi = {
     delete: (id) => api.delete(`/order-details/${id}`),
 };
 
-// Order-Promotion API (join)
+// Order-Promotion API
 export const orderPromotionApi = {
     getAll: (params) => api.get('/order-promotions', { params }),
     getById: (id) => api.get(`/order-promotions/${id}`),
@@ -166,7 +188,7 @@ export const orderPromotionApi = {
     delete: (id) => api.delete(`/order-promotions/${id}`),
 };
 
-// Cart-Detail API (join)
+// Cart-Detail API
 export const cartDetailApi = {
     getAll: (params) => api.get('/cart-details', { params }),
     getById: (id) => api.get(`/cart-details/${id}`),
@@ -199,28 +221,34 @@ export const cartStorage = {
     getItems: () => readCart(),
     addItem: (product, quantity = 1) => {
         const items = readCart();
-        const existing = items.find((x) => x.productId === product.id);
+        const variantId = product.variantId || 0;
+        const existing = items.find((x) => x.productId === product.id && (x.variantId || 0) === variantId);
         if (existing) {
             existing.quantity += quantity;
         } else {
             items.push({
                 productId: product.id,
+                variantId: variantId,
                 name: product.name,
                 price: product.price,
+                size: product.size,
+                color: product.color,
                 imageUrl: product.imageUrl || '/img/products/product-1.jpg',
                 quantity,
             });
         }
         writeCart(items);
     },
-    updateQuantity: (productId, quantity) => {
+    updateQuantity: (productId, variantId, quantity) => {
         const items = readCart().map((x) =>
-            x.productId === productId ? { ...x, quantity: Math.max(1, quantity) } : x
+            (x.productId === productId && (x.variantId || 0) === (variantId || 0)) 
+                ? { ...x, quantity: Math.max(1, quantity) } 
+                : x
         );
         writeCart(items);
     },
-    removeItem: (productId) => {
-        writeCart(readCart().filter((x) => x.productId !== productId));
+    removeItem: (productId, variantId) => {
+        writeCart(readCart().filter((x) => !(x.productId === productId && (x.variantId || 0) === (variantId || 0))));
     },
     clear: () => writeCart([]),
     getSummary: () => {

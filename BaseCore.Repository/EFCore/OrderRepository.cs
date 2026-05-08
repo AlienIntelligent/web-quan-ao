@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using BaseCore.Entities;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace BaseCore.Repository.EFCore
 {
@@ -28,6 +32,14 @@ namespace BaseCore.Repository.EFCore
         {
             return await _dbSet
                 .Where(o => o.UserId == userId)
+                .Include(o => o.OrderDetailOrders)
+                    .ThenInclude(od => od.Product)
+                .Include(o => o.OrderDetailOrders)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(v => v.SizeNavigation)
+                .Include(o => o.OrderDetailOrders)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(v => v.ColorNavigation)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
         }
@@ -36,7 +48,16 @@ namespace BaseCore.Repository.EFCore
         {
             return await _dbSet
                 .Include(o => o.OrderDetailOrders)
-                .ThenInclude(od => od.Product)
+                    .ThenInclude(od => od.Product)
+                .Include(o => o.OrderDetailOrders)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(v => v.SizeNavigation)
+                .Include(o => o.OrderDetailOrders)
+                    .ThenInclude(od => od.ProductVariant)
+                        .ThenInclude(v => v.ColorNavigation)
+                .Include(o => o.OrderPromotions)
+                    .ThenInclude(op => op.Promotion)
+                .Include(o => o.Shipping)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
         }
 
@@ -54,7 +75,8 @@ namespace BaseCore.Repository.EFCore
                 var lowerKeyword = keyword.ToLower();
                 query = query.Where(o =>
                     o.UserId.ToLower().Contains(lowerKeyword) ||
-                    o.Id.ToString().Contains(lowerKeyword));
+                    o.Id.ToString().Contains(lowerKeyword) ||
+                    o.OrderCode.ToLower().Contains(lowerKeyword));
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -70,6 +92,7 @@ namespace BaseCore.Repository.EFCore
 
             var totalCount = await query.CountAsync();
             var orders = await query
+                .Include(o => o.User)
                 .OrderByDescending(o => o.OrderDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -98,9 +121,11 @@ namespace BaseCore.Repository.EFCore
             return await _dbSet
                 .Where(od => od.OrderId == orderId)
                 .Include(od => od.Product)
+                .Include(od => od.ProductVariant)
+                    .ThenInclude(v => v.SizeNavigation)
+                .Include(od => od.ProductVariant)
+                    .ThenInclude(v => v.ColorNavigation)
                 .ToListAsync();
         }
     }
 }
-
-

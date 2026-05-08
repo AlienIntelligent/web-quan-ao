@@ -86,6 +86,7 @@ builder.Services.AddScoped<ICartDetailRepository, CartDetailRepository>();
 builder.Services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IWishlistItemRepository, WishlistItemRepository>();
 
 // Service Registration
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -96,6 +97,8 @@ builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IProductOriginService, ProductOriginService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
+builder.Services.AddScoped<IWishlistService, WishlistService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:SecretKey"] ?? "YourSecretKeyForAuthenticationShouldBeLongEnough");
@@ -124,38 +127,36 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var migrationsAssembly = db.GetService<IMigrationsAssembly>();
-    var firstMigrationId = migrationsAssembly.Migrations.Keys.OrderBy(x => x).FirstOrDefault();
+    // Improved Baselining: If Categories table already exists but migrations haven't been tracked,
+    // we mark all CURRENT migrations as applied to prevent "object already exists" errors.
+    var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+    var hasCategories = await db.Database.SqlQueryRaw<int>(
+        "SELECT CASE WHEN OBJECT_ID(N'Categories', N'U') IS NOT NULL THEN 1 ELSE 0 END AS [Value]")
+        .SingleOrDefaultAsync();
 
-    // Baseline existing databases that were created outside EF migration history.
-    // This prevents "object already exists" when InitialCreate is replayed.
-    if (!string.IsNullOrEmpty(firstMigrationId))
+    if (hasCategories == 1 && pendingMigrations.Any())
     {
-        var historyExists = await db.Database.SqlQueryRaw<int>(
-            "SELECT CASE WHEN OBJECT_ID(N'__EFMigrationsHistory', N'U') IS NOT NULL THEN 1 ELSE 0 END AS [Value]")
-            .SingleAsync();
+        // Ensure __EFMigrationsHistory exists
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+            BEGIN
+                CREATE TABLE [__EFMigrationsHistory] (
+                    [MigrationId] nvarchar(150) NOT NULL,
+                    [ProductVersion] nvarchar(32) NOT NULL,
+                    CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+                );
+            END");
 
-        if (historyExists == 0)
+        foreach (var migrationId in pendingMigrations)
         {
-            var hasLegacyTables = await db.Database.SqlQueryRaw<int>(
-                "SELECT CASE WHEN OBJECT_ID(N'Categories', N'U') IS NOT NULL OR OBJECT_ID(N'Users', N'U') IS NOT NULL THEN 1 ELSE 0 END AS [Value]")
-                .SingleAsync();
-
-            if (hasLegacyTables == 1)
-            {
-                await db.Database.ExecuteSqlRawAsync(@"
-                    CREATE TABLE [__EFMigrationsHistory](
-                        [MigrationId] nvarchar(150) NOT NULL,
-                        [ProductVersion] nvarchar(32) NOT NULL,
-                        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
-                    );
-                ");
-
-                await db.Database.ExecuteSqlRawAsync(
-                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ({0}, {1})",
-                    firstMigrationId,
-                    "8.0.8");
-            }
+            // Only mark as applied if it's not already there (though pendingMigrations should already filter this)
+            await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = {0}) " +
+                "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ({0}, {1})",
+                migrationId,
+                "8.0.8");
         }
+        Console.WriteLine("Baselined existing database: marked all pending migrations as applied.");
     }
 
     db.Database.Migrate();

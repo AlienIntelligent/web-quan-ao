@@ -32,6 +32,10 @@ public partial class User
     public DateTime Created { get; set; }
 
     public virtual ICollection<CartDetail> CartDetails { get; set; } = new List<CartDetail>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual ICollection<WishlistItem> WishlistItems { get; set; } = new List<WishlistItem>();
 }
 
 

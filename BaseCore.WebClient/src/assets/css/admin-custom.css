@@ -554,3 +554,125 @@ body {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
   outline: none !important;
 }
+
+/* Pagination */
+.pagination {
+  margin-bottom: 0 !important;
+}
+.pagination .page-item .page-link {
+  border-radius: 8px !important;
+  margin: 0 2px !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-size: 0.875rem !important;
+  padding: 0.4rem 0.75rem !important;
+  transition: all 0.2s ease !important;
+}
+.pagination .page-item.active .page-link {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+.pagination .page-item.disabled .page-link {
+  opacity: 0.5 !important;
+}
+.pagination .page-item .page-link:hover {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+
+/* Pagination container (prev/next buttons) */
+.pagination-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Badge secondary */
+.badge-secondary {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* Outline buttons in table */
+.table .btn-outline-info {
+  border: 1px solid #2563eb !important;
+  color: #2563eb !important;
+  background: transparent !important;
+}
+.table .btn-outline-info:hover {
+  background-color: #2563eb !important;
+  color: #fff !important;
+}
+.table .btn-outline-danger {
+  border: 1px solid #dc2626 !important;
+  color: #dc2626 !important;
+  background: transparent !important;
+}
+.table .btn-outline-danger:hover {
+  background-color: #dc2626 !important;
+  color: #fff !important;
+}
+
+/* Secondary outline button */
+.btn-outline-secondary {
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+  background: #fff !important;
+  padding: 0.4rem 0.75rem !important;
+}
+.btn-outline-secondary:hover {
+  background-color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Card-body p-0 override - allow table to touch edges */
+.card-body.p-0 .table td:first-child,
+.card-body.p-0 .table th:first-child {
+  padding-left: 1.5rem !important;
+}
+
+/* User panel */
+.user-panel {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-left: 1rem !important;
+}
+.user-panel .info a {
+  color: #d1d5db !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Main footer */
+.main-footer {
+  background: #fff !important;
+  border-top: 1px solid #f1f5f9 !important;
+  color: #64748b !important;
+  font-size: 0.875rem !important;
+}
+
+/* Content section spacing */
+.content {
+  padding-top: 0 !important;
+}
+
+/* Table responsive fix */
+.table-responsive {
+  border-radius: 0 !important;
+}
+
+/* Nav tabs for product modal */
+.nav-tabs .nav-link {
+  border-radius: 8px 8px 0 0 !important;
+  color: #64748b !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 1.25rem !important;
+}
+.nav-tabs .nav-link.active {
+  background-color: #fff !important;
+  color: var(--primary) !important;
+  border-bottom-color: #fff !important;
+  border-color: #e2e8f0 #e2e8f0 #fff !important;
+}

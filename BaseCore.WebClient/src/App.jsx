@@ -34,6 +34,7 @@ import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import OrderTracking from "./pages/OrderTracking";
 import Profile from "./pages/Profile";
+import Wishlist from "./pages/Wishlist";
 
 // Wrapper để redirect người dùng đã đăng nhập
 // - Admin → Dashboard
@@ -252,6 +253,7 @@ function AppRoutes() {
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/orders/:id/tracking" element={<OrderTracking />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/wishlist" element={<Wishlist />} />
 
       {/* 404 - Route không tìm thấy */}
       <Route path="*" element={<Navigate to="/home" replace />} />

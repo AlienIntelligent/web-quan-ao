@@ -6,7 +6,15 @@ namespace BaseCore.Services
 {
     public interface IOrderService
     {
-        Task<Order> CreateOrderAsync(Order order);
+        Task<Order> CreateOrderAsync(
+            string userId, 
+            List<(int ProductId, int? VariantId, int Quantity)> items, 
+            string shippingAddress, 
+            decimal shippingFee,
+            string? promotionCode = null,
+            string? paymentMethod = null,
+            string? note = null);
+
         Task<List<Order>> GetOrdersByUserIdAsync(string userId);
         Task<Order> GetOrderByIdAsync(int id);
         Task<Order> CheckoutAsync(string userId, string shippingAddress);

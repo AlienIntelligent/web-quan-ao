@@ -136,8 +136,7 @@ const Checkout = () => {
     }
   };
 
-  const applyCoupon = async (e) => {
-    e.preventDefault();
+  const applyCoupon = async () => {
     await handleApplyCode(couponCode.trim());
   };
 
@@ -184,8 +183,6 @@ const Checkout = () => {
       formData.address,
       formData.ward,
       formData.city,
-      formData.note ? `Ghi chú: ${formData.note}` : "",
-      `Thanh toán: ${paymentMethod === "cod" ? "Khi nhận hàng" : "Chuyển khoản"}`,
     ]
       .filter(Boolean)
       .join(" - ");
@@ -196,14 +193,22 @@ const Checkout = () => {
         shippingAddress,
         shippingFee: shipping,
         promotionCode: appliedCoupon?.code || null,
+        paymentMethod: paymentMethod === "cod" ? "COD" : "BANK_TRANSFER",
+        note: formData.note,
         items: currentCartItems.map((x) => ({
           productId: x.productId,
+          variantId: x.variantId || null,
           quantity: x.quantity,
         })),
       });
       
       // Chỉ xóa những sản phẩm đã mua khỏi giỏ hàng chính
-      cartItems.forEach(item => cartStorage.removeItem(item.productId));
+      cartItems.forEach(item => {
+          const items = cartStorage.getItems().filter(x => !(x.productId === item.productId && (x.variantId || 0) === (item.variantId || 0)));
+          localStorage.setItem('fashi_cart', JSON.stringify(items));
+      });
+      window.dispatchEvent(new Event('fashi-cart-updated'));
+      
       checkoutStorage.clear();
       couponStorage.clear();
       
@@ -275,12 +280,24 @@ const Checkout = () => {
                   <div className="order-total">
                     <ul className="order-table">
                       <li>Sản phẩm <span>Tổng</span></li>
-                      {cartItems.map((item) => (
-                        <li key={item.productId} className="fw-normal">
-                          {item.name} x {item.quantity}
-                          <span>{formatMoney(item.price * item.quantity)}</span>
-                        </li>
-                      ))}
+                      {cartItems.map((item) => {
+                        const itemKey = `${item.productId}-${item.variantId || 0}`;
+                        return (
+                          <li key={itemKey} className="fw-normal">
+                            <div className="d-flex justify-content-between">
+                              <span>
+                                {item.name} x {item.quantity}
+                                {(item.size || item.color) && (
+                                  <div className="small text-muted" style={{ fontSize: '11px' }}>
+                                    Phân loại: {item.size}{item.size && item.color ? ', ' : ''}{item.color}
+                                  </div>
+                                )}
+                              </span>
+                              <span>{formatMoney(item.price * item.quantity)}</span>
+                            </div>
+                          </li>
+                        );
+                      })}
                       <li className="fw-normal">Tạm tính <span>{formatMoney(subtotal)}</span></li>
                       <li className="fw-normal">Vận chuyển <span>{formatMoney(shipping)}</span></li>
                       <li className="fw-normal">Thuế VAT (8%) <span>{formatMoney(vat)}</span></li>
@@ -303,17 +320,23 @@ const Checkout = () => {
                           ))}
                         </select>
                       </div>
-                      <form className="coupon-form" onSubmit={applyCoupon}>
+                      <div className="coupon-form">
                         <input
                           type="text"
                           placeholder="Hoặc nhập mã tay"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              applyCoupon();
+                            }
+                          }}
                         />
-                        <button type="submit" className="site-btn coupon-btn" disabled={applyingCoupon}>
+                        <button type="button" onClick={applyCoupon} className="site-btn coupon-btn" disabled={applyingCoupon}>
                           {applyingCoupon ? "Đang kiểm tra..." : "Áp dụng"}
                         </button>
-                      </form>
+                      </div>
                       {appliedCoupon && (
                         <p className="text-success mt-2 mb-0">
                           Đã áp dụng {appliedCoupon.code}.{" "}

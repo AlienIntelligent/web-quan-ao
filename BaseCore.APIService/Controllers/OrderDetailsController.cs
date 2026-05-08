@@ -30,11 +30,17 @@ namespace BaseCore.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll(
             [FromQuery] string keyword = "",
+            [FromQuery] int? orderId = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
             Expression<Func<OrderDetail, bool>>? filter = null;
-            if (!string.IsNullOrWhiteSpace(keyword) && int.TryParse(keyword, out var n) && n > 0)
+            
+            if (orderId.HasValue)
+            {
+                filter = od => od.OrderId == orderId.Value;
+            }
+            else if (!string.IsNullOrWhiteSpace(keyword) && int.TryParse(keyword, out var n) && n > 0)
             {
                 filter = od => od.OrderId == n || od.ProductId == n;
             }

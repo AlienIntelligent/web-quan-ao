@@ -94,7 +94,7 @@ namespace BaseCore.AuthService.Controllers
                     Name = request.Name ?? request.Username,
                     Email = request.Email ?? string.Empty,
                     Phone = request.Phone ?? string.Empty,
-                    UserType = 0 // Default to regular user
+                    UserType = request.UserType ?? 0 // Default to regular user if not specified
                 };
 
                 var createdUser = await _userService.Create(user, request.Password, false);
@@ -153,6 +153,9 @@ namespace BaseCore.AuthService.Controllers
 
         [JsonPropertyName("phone")]
         public string? Phone { get; set; }
+
+        [JsonPropertyName("userType")]
+        public int? UserType { get; set; }
     }
 }
 

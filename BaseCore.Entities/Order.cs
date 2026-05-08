@@ -17,6 +17,16 @@ public partial class Order
 
     public string ShippingAddress { get; set; } = null!;
 
+    public string OrderCode { get; set; } = null!;
+    public string PaymentMethod { get; set; } = null!;
+    public string PaymentStatus { get; set; } = null!;
+    public decimal ShippingFee { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal FinalAmount { get; set; }
+    public string? Note { get; set; }
+    public string? CancelledReason { get; set; }
+    public DateTime? CancelledAt { get; set; }
+
     public virtual ICollection<OrderDetail> OrderDetailOrders { get; set; } = new List<OrderDetail>();
 
     public virtual ICollection<OrderPromotion> OrderPromotions { get; set; } = new List<OrderPromotion>();

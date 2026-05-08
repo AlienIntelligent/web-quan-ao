@@ -1,131 +1,44 @@
 import React, { useState, useEffect } from "react";
-import {
-  productApi,
-  userApi,
-  categoryApi,
-  originApi,
-  promotionApi,
-  shippingApi,
-  productOriginApi,
-  orderDetailApi,
-  orderPromotionApi,
-  cartDetailApi,
-} from "../services/api";
+import { analyticsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    products: 0,
-    categories: 0,
-    users: 0,
-    origins: 0,
-    promotions: 0,
-    shippings: 0,
-    productOrigins: 0,
-    orderDetails: 0,
-    orderPromotions: 0,
-    cartDetails: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalProducts: 0,
+    growthPercentage: 0
   });
+  const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isAdmin, user } = useAuth();
 
   useEffect(() => {
-    loadStats();
+    loadDashboardData();
   }, [user]);
 
-  const loadStats = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
-
-    const extractCount = (resData) => {
-      if (!resData) return 0;
-
-      // Prefer server-reported totalCount when available.
-      if (typeof resData.totalCount === "number") return resData.totalCount;
-
-      // Some responses are wrapped as { data: [...] }.
-      const d = resData?.data ?? resData;
-      if (!d) return 0;
-
-      return d.totalCount ?? d.items?.length ?? d.length ?? 0;
-    };
-
-    const next = { products: 0, categories: 0, users: 0 };
-
     try {
-      const productsRes = await productApi.getAll({ page: 1, pageSize: 10 });
-      next.products = extractCount(productsRes.data);
+      const [statsRes, bestSellersRes] = await Promise.all([
+        analyticsApi.getStats(),
+        analyticsApi.getBestSellers(5)
+      ]);
+      setStats(statsRes.data);
+      setBestSellers(bestSellersRes.data || []);
     } catch (error) {
-      console.error("Failed to load products stats:", error);
+      console.error("Failed to load dashboard data:", error);
+    } finally {
+      setLoading(false);
     }
-
-    try {
-      const categoriesRes = await categoryApi.getAll();
-      next.categories = extractCount(categoriesRes.data);
-    } catch (error) {
-      console.error("Failed to load categories stats:", error);
-    }
-
-    try {
-      if (isAdmin()) {
-        const usersRes = await userApi.getAll({ page: 1, pageSize: 1 });
-        next.users = extractCount(usersRes.data);
-      }
-    } catch (error) {
-      console.error("Failed to load users stats:", error);
-    }
-
-    try {
-      const res = await originApi.getAll({ page: 1, pageSize: 1 });
-      next.origins = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load origins stats:", error);
-    }
-
-    try {
-      const res = await promotionApi.getAll({ page: 1, pageSize: 1 });
-      next.promotions = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load promotions stats:", error);
-    }
-
-    try {
-      const res = await shippingApi.getAll({ page: 1, pageSize: 1 });
-      next.shippings = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load shippings stats:", error);
-    }
-
-    try {
-      const res = await productOriginApi.getAll({ page: 1, pageSize: 1 });
-      next.productOrigins = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load product origins stats:", error);
-    }
-
-    try {
-      const res = await orderDetailApi.getAll({ page: 1, pageSize: 1 });
-      next.orderDetails = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load order details stats:", error);
-    }
-
-    try {
-      const res = await orderPromotionApi.getAll({ page: 1, pageSize: 1 });
-      next.orderPromotions = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load order promotions stats:", error);
-    }
-
-    try {
-      const res = await cartDetailApi.getAll({ page: 1, pageSize: 1 });
-      next.cartDetails = extractCount(res.data);
-    } catch (error) {
-      console.error("Failed to load cart details stats:", error);
-    }
-
-    setStats(next);
-    setLoading(false);
   };
+
+  const formatMoney = (value) =>
+    Number(value || 0).toLocaleString("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
 
   return (
     <div className="content-wrapper">
@@ -133,7 +46,7 @@ const Dashboard = () => {
         <div className="container-fluid">
           <div className="row mb-2">
             <div className="col-sm-6">
-              <h1 className="m-0">Bảng điều khiển</h1>
+              <h1 className="m-0">Bảng điều khiển quản trị</h1>
             </div>
           </div>
         </div>
@@ -149,194 +62,148 @@ const Dashboard = () => {
             </div>
           ) : (
             <>
+              {/* Summary Cards */}
               <div className="row">
                 <div className="col-lg-3 col-6">
-                  <div className="small-box bg-info">
+                  <div className="small-box bg-info shadow-sm">
                     <div className="inner">
-                      <h3>{stats.products}</h3>
+                      <h3>{stats.totalOrders}</h3>
+                      <p>Đơn hàng mới</p>
+                    </div>
+                    <div className="icon">
+                      <i className="fas fa-shopping-cart"></i>
+                    </div>
+                    <a href="/orders" className="small-box-footer">
+                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
+                    </a>
+                  </div>
+                </div>
+                <div className="col-lg-3 col-6">
+                  <div className="small-box bg-success shadow-sm">
+                    <div className="inner">
+                      <h3>{formatMoney(stats.totalRevenue)}</h3>
+                      <p>Tổng doanh thu</p>
+                    </div>
+                    <div className="icon">
+                      <i className="fas fa-dollar-sign"></i>
+                    </div>
+                    <a href="#" className="small-box-footer">
+                      Báo cáo chi tiết <i className="fas fa-arrow-circle-right"></i>
+                    </a>
+                  </div>
+                </div>
+                <div className="col-lg-3 col-6">
+                  <div className="small-box bg-warning shadow-sm">
+                    <div className="inner">
+                      <h3>{stats.totalCustomers}</h3>
+                      <p>Khách hàng</p>
+                    </div>
+                    <div className="icon">
+                      <i className="fas fa-users"></i>
+                    </div>
+                    <a href="/users" className="small-box-footer">
+                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
+                    </a>
+                  </div>
+                </div>
+                <div className="col-lg-3 col-6">
+                  <div className="small-box bg-danger shadow-sm">
+                    <div className="inner">
+                      <h3>{stats.totalProducts}</h3>
                       <p>Sản phẩm</p>
                     </div>
                     <div className="icon">
-                      <i className="fas fa-box"></i>
+                      <i className="fas fa-box-open"></i>
                     </div>
                     <a href="/products" className="small-box-footer">
                       Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
                     </a>
                   </div>
                 </div>
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-success">
-                    <div className="inner">
-                      <h3>{stats.categories}</h3>
-                      <p>Danh mục</p>
-                    </div>
-                    <div className="icon">
-                      <i className="fas fa-tags"></i>
-                    </div>
-                    <a href="/categories" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
-                  </div>
-                </div>
-                {isAdmin() && (
-                  <div className="col-lg-3 col-6">
-                    <div className="small-box bg-warning">
-                      <div className="inner">
-                        <h3>{stats.users}</h3>
-                        <p>Người dùng</p>
-                      </div>
-                      <div className="icon">
-                        <i className="fas fa-users"></i>
-                      </div>
-                      <a href="/users" className="small-box-footer">
-                        Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                      </a>
-                    </div>
-                  </div>
-                )}
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-primary">
-                    <div className="inner">
-                      <h3>{stats.origins}</h3>
-                      <p>Xuất xứ</p>
-                    </div>
-                    <div className="icon">
-                      <i className="fas fa-industry"></i>
-                    </div>
-                    <a href="/origins" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
-                  </div>
-                </div>
               </div>
 
               <div className="row">
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-purple">
-                    <div className="inner">
-                      <h3>{stats.promotions}</h3>
-                      <p>Khuyến mãi</p>
+                {/* Best Sellers Table */}
+                <div className="col-lg-7">
+                  <div className="card shadow-sm">
+                    <div className="card-header border-0">
+                      <h3 className="card-title">Sản phẩm bán chạy</h3>
+                      <div className="card-tools">
+                        <a href="#" className="btn btn-tool btn-sm">
+                          <i className="fas fa-download"></i>
+                        </a>
+                      </div>
                     </div>
-                    <div className="icon">
-                      <i className="fas fa-percentage"></i>
+                    <div className="card-body table-responsive p-0">
+                      <table className="table table-striped table-valign-middle">
+                        <thead>
+                          <tr>
+                            <th>Sản phẩm</th>
+                            <th>Giá</th>
+                            <th>Đã bán</th>
+                            <th>Doanh thu</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bestSellers.map((item) => (
+                            <tr key={item.productId}>
+                              <td>{item.productName}</td>
+                              <td>{formatMoney(item.totalRevenue / (item.totalSold || 1))}</td>
+                              <td>
+                                <small className="text-success mr-1">
+                                  <i className="fas fa-arrow-up"></i>
+                                </small>
+                                {item.totalSold}
+                              </td>
+                              <td>{formatMoney(item.totalRevenue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <a href="/promotions" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
                   </div>
                 </div>
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-teal">
-                    <div className="inner">
-                      <h3>{stats.shippings}</h3>
-                      <p>Vận chuyển</p>
-                    </div>
-                    <div className="icon">
-                      <i className="fas fa-truck"></i>
-                    </div>
-                    <a href="/shippings" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
-                  </div>
-                </div>
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-maroon">
-                    <div className="inner">
-                      <h3>{stats.productOrigins}</h3>
-                      <p>Xuất xứ sản phẩm</p>
-                    </div>
-                    <div className="icon">
-                      <i className="fas fa-link"></i>
-                    </div>
-                    <a href="/product-origins" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
-                  </div>
-                </div>
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-info">
-                    <div className="inner">
-                      <h3>{stats.orderDetails}</h3>
-                      <p>Chi tiết đơn hàng</p>
-                    </div>
-                    <div className="icon">
-                      <i className="fas fa-list"></i>
-                    </div>
-                    <a href="/order-details" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
 
-              <div className="row">
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-warning">
-                    <div className="inner">
-                      <h3>{stats.orderPromotions}</h3>
-                      <p>Khuyến mãi đơn hàng</p>
+                {/* Growth/Info Card */}
+                <div className="col-lg-5">
+                  <div className="card shadow-sm bg-gradient-primary">
+                    <div className="card-header border-0">
+                      <h3 className="card-title">Hiệu suất tăng trưởng</h3>
                     </div>
-                    <div className="icon">
-                      <i className="fas fa-tags"></i>
+                    <div className="card-body text-center py-5">
+                      <div className="growth-circle mb-3">
+                        <h2 className="display-4 font-weight-bold">+{stats.growthPercentage}%</h2>
+                        <p>Tăng trưởng so với tháng trước</p>
+                      </div>
+                      <button className="btn btn-light btn-sm px-4 font-weight-bold">XEM PHÂN TÍCH</button>
                     </div>
-                    <a href="/order-promotions" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
                   </div>
-                </div>
-                <div className="col-lg-3 col-6">
-                  <div className="small-box bg-success">
-                    <div className="inner">
-                      <h3>{stats.cartDetails}</h3>
-                      <p>Chi tiết giỏ hàng</p>
+
+                  <div className="card shadow-sm">
+                    <div className="card-header">
+                      <h3 className="card-title">Ghi chú nhanh</h3>
                     </div>
-                    <div className="icon">
-                      <i className="fas fa-shopping-cart"></i>
+                    <div className="card-body">
+                      <div className="d-flex align-items-center border-bottom mb-3 pb-3">
+                        <i className="fas fa-info-circle text-info mr-3 fa-2x"></i>
+                        <div>
+                          <p className="mb-0 font-weight-bold">Kiểm tra kho hàng</p>
+                          <small className="text-muted">Có 3 sản phẩm sắp hết hàng.</small>
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-exclamation-triangle text-warning mr-3 fa-2x"></i>
+                        <div>
+                          <p className="mb-0 font-weight-bold">Đơn hàng chờ duyệt</p>
+                          <small className="text-muted">Có 5 đơn hàng mới cần xử lý.</small>
+                        </div>
+                      </div>
                     </div>
-                    <a href="/cart-details" className="small-box-footer">
-                      Xem chi tiết <i className="fas fa-arrow-circle-right"></i>
-                    </a>
                   </div>
                 </div>
               </div>
             </>
           )}
-
-          <div className="row">
-            <div className="col-12">
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">
-                    Chào mừng đến với Hệ thống Quản trị Store Sales
-                  </h3>
-                </div>
-                <div className="card-body">
-                  <p>Hệ thống quản lý được xây dựng trên các công nghệ hiện đại:</p>
-                  <ul>
-                    <li>
-                      <strong>Backend:</strong> .NET Core 8.0 với Entity Framework Core
-                    </li>
-                    <li>
-                      <strong>Frontend:</strong> React 18 với React Router
-                    </li>
-                    <li>
-                      <strong>Giao diện:</strong> AdminLTE 3 với Bootstrap 4
-                    </li>
-                    <li>
-                      <strong>Bảo mật:</strong> JWT Bearer Token
-                    </li>
-                  </ul>
-                  <p>Các tính năng chính:</p>
-                  <ul>
-                    <li>Quản lý xác thực (Đăng nhập/Đăng xuất)</li>
-                    <li>Quản lý sản phẩm (Thêm, Xóa, Sửa, Tìm kiếm & Phân trang)</li>
-                    <li>Quản lý danh mục & Đơn hàng</li>
-                    <li>Quản lý người dùng (Chỉ dành cho Quản trị viên)</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>

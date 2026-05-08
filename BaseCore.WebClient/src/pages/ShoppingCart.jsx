@@ -33,7 +33,7 @@ const ShoppingCart = () => {
   }, []);
 
   const selectedItems = useMemo(
-    () => cartItems.filter(item => selectedItemIds.includes(item.productId)),
+    () => cartItems.filter(item => selectedItemIds.includes(`${item.productId}-${item.variantId || 0}`)),
     [cartItems, selectedItemIds]
   );
 
@@ -84,12 +84,18 @@ const ShoppingCart = () => {
     };
   }, [subtotal, shipping, cartItems.length]);
 
-  const updateQuantity = (productId, nextQty) => {
-    cartStorage.updateQuantity(productId, nextQty);
+  const updateQuantity = (productId, variantId, nextQty) => {
+    const items = cartStorage.getItems().map((x) =>
+        x.productId === productId && (x.variantId || 0) === (variantId || 0) 
+        ? { ...x, quantity: Math.max(1, nextQty) } 
+        : x
+    );
+    localStorage.setItem('fashi_cart', JSON.stringify(items));
+    window.dispatchEvent(new Event('fashi-cart-updated'));
   };
 
-  const removeItem = async (productId) => {
-    const item = cartItems.find((x) => x.productId === productId);
+  const removeItem = async (productId, variantId) => {
+    const item = cartItems.find((x) => x.productId === productId && (x.variantId || 0) === (variantId || 0));
     const result = await confirmAction(
       "Xóa sản phẩm?",
       `Bạn có chắc chắn muốn xóa ${item?.name || "sản phẩm này"} khỏi giỏ hàng?`,
@@ -97,7 +103,9 @@ const ShoppingCart = () => {
     );
 
     if (result.isConfirmed) {
-      cartStorage.removeItem(productId);
+      const items = cartStorage.getItems().filter(x => !(x.productId === productId && (x.variantId || 0) === (variantId || 0)));
+      localStorage.setItem('fashi_cart', JSON.stringify(items));
+      window.dispatchEvent(new Event('fashi-cart-updated'));
       alertSuccess("Đã xóa!", "Sản phẩm đã được xóa khỏi giỏ hàng.");
     }
   };
@@ -169,11 +177,12 @@ const ShoppingCart = () => {
     }
   };
 
-  const toggleItem = (productId) => {
+  const toggleItem = (productId, variantId) => {
+    const key = `${productId}-${variantId || 0}`;
     setSelectedItemIds(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
+      prev.includes(key) 
+        ? prev.filter(id => id !== key)
+        : [...prev, key]
     );
   };
 
@@ -181,7 +190,7 @@ const ShoppingCart = () => {
     if (selectedItemIds.length === cartItems.length) {
       setSelectedItemIds([]);
     } else {
-      setSelectedItemIds(cartItems.map(i => i.productId));
+      setSelectedItemIds(cartItems.map(i => `${i.productId}-${i.variantId || 0}`));
     }
   };
 
@@ -193,7 +202,9 @@ const ShoppingCart = () => {
       "Xóa ngay"
     );
     if (result.isConfirmed) {
-      selectedItemIds.forEach(id => cartStorage.removeItem(id));
+      const items = cartStorage.getItems().filter(x => !selectedItemIds.includes(`${x.productId}-${x.variantId || 0}`));
+      localStorage.setItem('fashi_cart', JSON.stringify(items));
+      window.dispatchEvent(new Event('fashi-cart-updated'));
       setSelectedItemIds([]);
       alertSuccess("Đã xóa!", "Các sản phẩm đã được loại bỏ.");
     }
@@ -244,38 +255,46 @@ const ShoppingCart = () => {
                 <Link to="/shop" className="primary-btn mt-2" style={{ background: '#e7ab3c', border: 'none' }}>MUA NGAY</Link>
               </div>
             ) : (
-              cartItems.map((item) => (
-                <div key={item.productId} className={`cart-item-shopee d-flex align-items-center mb-3 shadow-sm ${selectedItemIds.includes(item.productId) ? 'selected' : ''}`}>
-                  <div className="col-checkbox px-3">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedItemIds.includes(item.productId)}
-                      onChange={() => toggleItem(item.productId)}
-                    />
-                  </div>
-                  <div className="col-product d-flex align-items-center">
-                    <div className="item-pic">
-                      <img src={item.imageUrl} alt={item.name} />
+              cartItems.map((item) => {
+                const itemKey = `${item.productId}-${item.variantId || 0}`;
+                return (
+                    <div key={itemKey} className={`cart-item-shopee d-flex align-items-center mb-3 shadow-sm ${selectedItemIds.includes(itemKey) ? 'selected' : ''}`}>
+                      <div className="col-checkbox px-3">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedItemIds.includes(itemKey)}
+                          onChange={() => toggleItem(item.productId, item.variantId)}
+                        />
+                      </div>
+                      <div className="col-product d-flex align-items-center">
+                        <div className="item-pic">
+                          <img src={item.imageUrl} alt={item.name} />
+                        </div>
+                        <div className="item-info ml-3">
+                          <Link to={`/product/${item.productId}`} className="item-name">{item.name}</Link>
+                          {(item.size || item.color) && (
+                            <div className="item-variant text-muted small mt-1">
+                                Phân loại: {item.size && <span>Size {item.size}</span>}{item.size && item.color && <span>, </span>}{item.color && <span>Màu {item.color}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="col-price text-center">{formatMoney(item.price)}</div>
+                      <div className="col-quantity d-flex justify-content-center">
+                        <div className="quantity-shopee d-flex align-items-center">
+                          <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)}>-</button>
+                          <input type="text" value={item.quantity} readOnly />
+                          <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}>+</button>
+                        </div>
+                      </div>
+                      <div className="col-total text-center text-orange">{formatMoney(item.price * item.quantity)}</div>
+                      <div className="col-action text-center">
+                        <button className="btn-delete-item" onClick={() => removeItem(item.productId, item.variantId)}>Xóa</button>
+                        <Link to={`/shop?categoryId=${item.categoryId}`} className="btn-similar-item mt-1">Tìm tương tự</Link>
+                      </div>
                     </div>
-                    <div className="item-info ml-3">
-                      <Link to={`/product/${item.productId}`} className="item-name">{item.name}</Link>
-                    </div>
-                  </div>
-                  <div className="col-price text-center">{formatMoney(item.price)}</div>
-                  <div className="col-quantity d-flex justify-content-center">
-                    <div className="quantity-shopee d-flex align-items-center">
-                      <button onClick={() => updateQuantity(item.productId, item.quantity - 1)}>-</button>
-                      <input type="text" value={item.quantity} readOnly />
-                      <button onClick={() => updateQuantity(item.productId, item.quantity + 1)}>+</button>
-                    </div>
-                  </div>
-                  <div className="col-total text-center text-orange">{formatMoney(item.price * item.quantity)}</div>
-                  <div className="col-action text-center">
-                    <button className="btn-delete-item" onClick={() => removeItem(item.productId)}>Xóa</button>
-                    <Link to={`/shop?categoryId=${item.categoryId}`} className="btn-similar-item mt-1">Tìm tương tự</Link>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 

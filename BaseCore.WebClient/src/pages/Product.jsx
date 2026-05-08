@@ -16,6 +16,7 @@ const Product = () => {
   const [product, setProduct] = useState(null);
   const [variants, setVariants] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
 
   const [reviews, setReviews] = useState([]);
   const [reviewsCount, setReviewsCount] = useState(0);
@@ -56,7 +57,11 @@ const Product = () => {
 
         setProduct(p ?? null);
         setVariants(vs);
-        setSelectedSize(vs[0]?.size ?? null);
+        
+        if (vs.length > 0) {
+            setSelectedSize(vs[0].size);
+            setSelectedColor(vs[0].color);
+        }
 
         const payload = rRes?.data || {};
         setReviews(Array.isArray(payload.items) ? payload.items : []);
@@ -85,19 +90,29 @@ const Product = () => {
   }, [id]);
 
   const sizeOptions = useMemo(() => {
-    const map = new Map();
-    (variants || []).forEach((v) => {
-      if (!v?.size) return;
-      if (!map.has(v.size)) map.set(v.size, v);
+    const sizes = new Set();
+    (variants || []).forEach(v => {
+        if (v.size) sizes.add(v.size);
     });
-    return Array.from(map.values());
+    return Array.from(sizes);
   }, [variants]);
+
+  const colorOptions = useMemo(() => {
+    const colors = new Set();
+    (variants || []).forEach(v => {
+        if (v.size === selectedSize && v.color) {
+            colors.add(v.color);
+        }
+    });
+    return Array.from(colors);
+  }, [variants, selectedSize]);
 
   const selectedVariant = useMemo(() => {
     if (!variants?.length) return null;
-    if (selectedSize) return variants.find((v) => v.size === selectedSize) ?? null;
-    return variants[0] ?? null;
-  }, [selectedSize, variants]);
+    return variants.find(v => v.size === selectedSize && v.color === selectedColor) 
+           || variants.find(v => v.size === selectedSize)
+           || variants[0];
+  }, [selectedSize, selectedColor, variants]);
 
   const displayPrice = Number(selectedVariant?.price ?? product?.price ?? 0);
   const displayOriginalPrice = product?.originalPrice ?? null;
@@ -122,19 +137,22 @@ const Product = () => {
   }, [product]);
 
   const handleAddToCart = () => {
-    if (!product || !selectedVariant) return;
+    if (!product) return;
 
     const qty = Math.max(1, Number(quantity) || 1);
     if (displayStock < qty) {
-      alert("Hết hàng cho size bạn chọn");
+      alert("Hết hàng cho lựa chọn này");
       return;
     }
 
     cartStorage.addItem(
       {
         id: product.id,
+        variantId: selectedVariant?.id,
         name: product.name,
         price: displayPrice,
+        size: selectedVariant?.size,
+        color: selectedVariant?.color,
         imageUrl: productImage,
       },
       qty,
@@ -308,11 +326,11 @@ const Product = () => {
                   <span className="text-muted" style={{ width: '110px', fontSize: '14px' }}>Kích cỡ</span>
                   <div className="d-flex flex-wrap">
                     {sizeOptions.length > 0 ? (
-                      sizeOptions.map((v) => {
-                        const inputId = `size-${String(v.size).toLowerCase()}`;
-                        const isActive = selectedSize === v.size;
+                      sizeOptions.map((size) => {
+                        const inputId = `size-${String(size).toLowerCase()}`;
+                        const isActive = selectedSize === size;
                         return (
-                          <div className="sc-item mr-2" key={v.size}>
+                          <div className="sc-item mr-2" key={size}>
                             <label
                               htmlFor={inputId}
                               className={isActive ? "active" : ""}
@@ -327,12 +345,17 @@ const Product = () => {
                                 type="radio"
                                 id={inputId}
                                 name="size"
-                                value={v.size}
+                                value={size}
                                 checked={isActive}
-                                onChange={() => setSelectedSize(v.size)}
+                                onChange={() => {
+                                    setSelectedSize(size);
+                                    // Auto select first color of this size
+                                    const firstColor = variants.find(v => v.size === size)?.color;
+                                    if (firstColor) setSelectedColor(firstColor);
+                                }}
                                 style={{ display: 'none' }}
                               />
-                              {v.size}
+                              {size}
                               {isActive && (
                                 <div style={{
                                   position: 'absolute', right: 0, bottom: 0, width: '0', height: '0',
@@ -347,10 +370,56 @@ const Product = () => {
                         );
                       })
                     ) : (
-                      <div className="text-muted">Không có phân loại</div>
+                      <div className="text-muted">Mặc định</div>
                     )}
                   </div>
                 </div>
+
+                {colorOptions.length > 0 && (
+                  <div className="pd-color-choose d-flex align-items-center mb-4">
+                    <span className="text-muted" style={{ width: '110px', fontSize: '14px' }}>Màu sắc</span>
+                    <div className="d-flex flex-wrap">
+                      {colorOptions.map((color) => {
+                        const inputId = `color-${String(color).toLowerCase()}`;
+                        const isActive = selectedColor === color;
+                        return (
+                          <div className="sc-item mr-2" key={color}>
+                            <label
+                              htmlFor={inputId}
+                              className={isActive ? "active" : ""}
+                              style={{
+                                display: 'inline-block', padding: '6px 15px', border: isActive ? '1px solid #e7ab3c' : '1px solid #ebebeb',
+                                cursor: 'pointer', transition: 'all 0.3s', backgroundColor: '#fff',
+                                color: isActive ? '#e7ab3c' : '#252525', borderRadius: '2px', fontSize: '14px',
+                                textAlign: 'center', minWidth: '60px', position: 'relative'
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                id={inputId}
+                                name="color"
+                                value={color}
+                                checked={isActive}
+                                onChange={() => setSelectedColor(color)}
+                                style={{ display: 'none' }}
+                              />
+                              {color}
+                              {isActive && (
+                                <div style={{
+                                  position: 'absolute', right: 0, bottom: 0, width: '0', height: '0',
+                                  borderStyle: 'solid', borderWidth: '0 0 10px 10px',
+                                  borderColor: `transparent transparent #e7ab3c transparent`
+                                }}>
+                                  <i className="fa fa-check" style={{ position: 'absolute', bottom: '-10px', right: 0, color: '#fff', fontSize: '8px' }}></i>
+                                </div>
+                              )}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="quantity-section d-flex align-items-center mb-5">
                   <span className="text-muted" style={{ width: '110px', fontSize: '14px', flexShrink: 0 }}>Số lượng</span>

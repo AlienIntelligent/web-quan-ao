@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using BaseCore.Entities;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BaseCore.Repository.EFCore
 {
@@ -13,6 +16,8 @@ namespace BaseCore.Repository.EFCore
             int? categoryId,
             decimal? minPrice,
             decimal? maxPrice,
+            int? sizeId,
+            int? colorId,
             int page,
             int pageSize);
         Task<List<Product>> GetByCategoryAsync(int categoryId);
@@ -29,6 +34,8 @@ namespace BaseCore.Repository.EFCore
             int? categoryId,
             decimal? minPrice,
             decimal? maxPrice,
+            int? sizeId,
+            int? colorId,
             int page,
             int pageSize)
         {
@@ -36,6 +43,7 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.Category)
                 .Include(p => p.ProductOrigin)
                     .ThenInclude(po => po.Origin)
+                .Include(p => p.ProductVariants)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
@@ -63,6 +71,16 @@ namespace BaseCore.Repository.EFCore
                 query = query.Where(p => p.Price <= maxPrice.Value);
             }
 
+            if (sizeId.HasValue)
+            {
+                query = query.Where(p => p.ProductVariants.Any(v => v.SizeId == sizeId.Value));
+            }
+
+            if (colorId.HasValue)
+            {
+                query = query.Where(p => p.ProductVariants.Any(v => v.ColorId == colorId.Value));
+            }
+
             var totalCount = await query.CountAsync();
 
             var products = await query
@@ -83,5 +101,3 @@ namespace BaseCore.Repository.EFCore
         }
     }
 }
-
-

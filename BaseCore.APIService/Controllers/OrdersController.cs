@@ -19,15 +19,14 @@ namespace BaseCore.APIService.Controllers
     {
         private static readonly HashSet<string> AllowedStatuses = new(StringComparer.OrdinalIgnoreCase)
         {
-            "CHO_XU_LY",
-            "DANG_VAN_CHUYEN",
-            "DA_VAN_CHUYEN",
-            "HUY",
-            "CHO_DUYET_HUY",
-            "Pending",
-            "Shipping",
-            "Delivered",
-            "Cancelled"
+            "PENDING",
+            "CONFIRMED",
+            "PROCESSING",
+            "SHIPPED",
+            "DELIVERING",
+            "DELIVERED",
+            "CANCELLED",
+            "RETURNED"
         };
 
         private readonly IOrderRepository _orderRepository;
@@ -164,113 +163,31 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Validate products and calculate subtotal
-                decimal subtotal = 0;
-                var orderDetails = new List<OrderDetail>();
-                var productsToUpdate = new List<Product>();
-
-                foreach (var item in dto.Items)
-                {
-                    if (item.Quantity <= 0)
-                        return BadRequest(new { message = "Số lượng phải lớn hơn 0" });
-
-                    var product = await _productRepository.GetByIdAsync(item.ProductId);
-                    if (product == null)
-                        return BadRequest(new { message = $"Sản phẩm #{item.ProductId} không tồn tại" });
-
-                    if (product.Stock < item.Quantity)
-                        return BadRequest(new { message = $"Sản phẩm {product.Name} không đủ tồn kho" });
-
-                    subtotal += product.Price * item.Quantity;
-                    orderDetails.Add(new OrderDetail
-                    {
-                        ProductId = item.ProductId,
-                        Quantity = item.Quantity,
-                        UnitPrice = product.Price
-                    });
-
-                    product.Stock -= item.Quantity;
-                    productsToUpdate.Add(product);
-                }
-
-                var shippingFee = Math.Max(0, dto.ShippingFee);
-                PromotionApplicationResult? promotionResult = null;
-
-                if (!string.IsNullOrWhiteSpace(dto.PromotionCode))
-                {
-                    try
-                    {
-                        promotionResult = await _promotionService.ApplyPromotionAsync(
-                            dto.PromotionCode,
-                            subtotal,
-                            shippingFee);
-                    }
-                    catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-                    {
-                        return BadRequest(new { message = ex.Message });
-                    }
-                }
-
-                var totalAmount = promotionResult?.FinalTotal ?? subtotal + shippingFee;
-
-                var order = new Order
-                {
-                    UserId = userId,
-                    OrderDate = DateTime.Now,
-                    TotalAmount = totalAmount,
-                    Status = "CHO_XU_LY",
-                    ShippingAddress = dto.ShippingAddress ?? ""
-                };
-
-                await _orderRepository.AddAsync(order);
-
-                // Add order details
-                foreach (var detail in orderDetails)
-                {
-                    detail.OrderId = order.Id;
-                    await _orderDetailRepository.AddAsync(detail);
-                }
-
-                foreach (var product in productsToUpdate)
-                {
-                    await _productRepository.UpdateAsync(product);
-                }
-
-                if (promotionResult != null)
-                {
-                    await _orderPromotionRepository.AddAsync(new OrderPromotion
-                    {
-                        OrderId = order.Id,
-                        PromotionId = promotionResult.Promotion.Id,
-                        DiscountAmount = promotionResult.DiscountAmount,
-                        AppliedAt = DateTime.Now
-                    });
-
-                    promotionResult.Promotion.UsedCount += 1;
-                    await _promotionService.UpdatePromotionAsync(promotionResult.Promotion);
-                }
-
-                await transaction.CommitAsync();
+                var items = dto.Items.Select(i => (i.ProductId, i.VariantId, i.Quantity)).ToList();
+                
+                var order = await _orderService.CreateOrderAsync(
+                    userId, 
+                    items, 
+                    dto.ShippingAddress ?? "", 
+                    dto.ShippingFee,
+                    dto.PromotionCode,
+                    dto.PaymentMethod,
+                    dto.Note);
 
                 return CreatedAtAction(nameof(GetById), new { id = order.Id }, new
                 {
                     order,
-                    details = orderDetails,
-                    promotion = promotionResult == null ? null : new
-                    {
-                        id = promotionResult.Promotion.Id,
-                        code = promotionResult.Promotion.Code,
-                        discountAmount = promotionResult.DiscountAmount
-                    }
+                    details = order.OrderDetailOrders
                 });
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+                var innerMsg = ex.InnerException?.InnerException?.Message 
+                              ?? ex.InnerException?.Message 
+                              ?? ex.Message;
+                return BadRequest(new { message = innerMsg });
             }
         }
 
@@ -287,7 +204,7 @@ namespace BaseCore.APIService.Controllers
             try
             {
                 Order order;
-                if (dto.Status.Equals("HUY", StringComparison.OrdinalIgnoreCase))
+                if (dto.Status.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase))
                 {
                     order = await _orderService.ApproveCancelOrderAsync(id);
                 }
@@ -328,11 +245,14 @@ namespace BaseCore.APIService.Controllers
         public string? ShippingAddress { get; set; }
         public string? PromotionCode { get; set; }
         public decimal ShippingFee { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? Note { get; set; }
     }
 
     public class OrderItemDto
     {
         public int ProductId { get; set; }
+        public int? VariantId { get; set; }
         public int Quantity { get; set; }
     }
 

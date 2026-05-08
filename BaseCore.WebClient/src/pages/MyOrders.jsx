@@ -6,15 +6,15 @@ import { useAuth } from "../contexts/AuthContext";
 import { alertSuccess, alertError, confirmAction } from "../services/swal";
 
 const STATUS_TABS = [
-  { key: "all", label: "Tất cả", values: [] },
-  { key: "pending", label: "Chờ xác nhận", values: ["CHO_XU_LY", "Pending"] },
-  { key: "shipping", label: "Đang giao", values: ["DANG_VAN_CHUYEN", "Shipping"] },
-  { key: "delivered", label: "Đã giao", values: ["DA_VAN_CHUYEN", "Delivered"] },
-  { key: "cancelled", label: "Đã hủy", values: ["HUY", "Cancelled"] },
+  { key: "all",       label: "Tất cả",       values: [] },
+  { key: "pending",   label: "Chờ xác nhận", values: ["PENDING", "CONFIRMED"] },
+  { key: "shipping",  label: "Đang giao",    values: ["SHIPPED", "DELIVERING"] },
+  { key: "delivered", label: "Đã giao",      values: ["DELIVERED"] },
+  { key: "cancelled", label: "Đã hủy",      values: ["CANCELLED", "RETURNED"] },
 ];
 
 const statusLabel = (status) => {
-  if (status === "CHO_DUYET_HUY") return "Chờ duyệt hủy";
+  if (status === "PROCESSING") return "Chờ duyệt hủy";
   const match = STATUS_TABS.find((tab) => tab.values.includes(status));
   return match?.label || status || "Đang cập nhật";
 };
@@ -126,7 +126,7 @@ const MyOrders = () => {
 
               <div className="order-list">
                 {filteredOrders.map((order) => {
-                  const canRequestCancel = ["CHO_XU_LY", "Pending"].includes(order.status);
+                  const canRequestCancel = ["PENDING", "CONFIRMED"].includes(order.status);
                   return (
                     <div className="order-card" key={order.id}>
                       <div className="order-card-header">
@@ -134,13 +134,32 @@ const MyOrders = () => {
                           <strong>Đơn hàng #{order.id}</strong>
                           <span>{new Date(order.orderDate).toLocaleString("vi-VN")}</span>
                         </div>
-                        <div className={`order-status ${order.status === "CHO_DUYET_HUY" ? "status-warning" : ""}`}>
+                        <div className={`order-status ${order.status === "PROCESSING" ? "status-warning" : ""}`}>
                           {statusLabel(order.status)}
                         </div>
                       </div>
                       <div className="order-card-body">
-                        <p><i className="fa fa-map-marker"></i> {order.shippingAddress || "Chưa có địa chỉ giao hàng"}</p>
-                        <p><i className="fa fa-money"></i> Tổng thanh toán: <strong>{formatMoney(order.totalAmount)}</strong></p>
+                        <div className="order-items-summary mb-3">
+                          {order.orderDetailOrders?.map((detail) => (
+                            <div key={detail.id} className="d-flex align-items-center mb-2">
+                              <img 
+                                src={detail.product?.imageUrl ? (detail.product.imageUrl.startsWith('http') ? detail.product.imageUrl : `/img/products/${detail.product.imageUrl}`) : '/img/products/product-1.jpg'} 
+                                alt={detail.product?.name} 
+                                style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
+                                className="mr-3"
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div className="font-weight-bold" style={{ fontSize: '14px' }}>{detail.product?.name}</div>
+                                <div className="text-muted small">
+                                  {detail.productVariant ? `${detail.productVariant.sizeNavigation?.name} / ${detail.productVariant.colorNavigation?.name}` : 'Không có biến thể'} x {detail.quantity}
+                                </div>
+                              </div>
+                              <div className="text-warning font-weight-bold">{formatMoney(detail.unitPrice)}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mb-1"><i className="fa fa-map-marker"></i> {order.shippingAddress || "Chưa có địa chỉ giao hàng"}</p>
+                        <p className="mb-0"><i className="fa fa-money"></i> Tổng thanh toán: <strong className="text-danger" style={{ fontSize: '18px' }}>{formatMoney(order.totalAmount)}</strong></p>
                       </div>
                       <div className="order-actions">
                         <Link to={`/orders/${order.id}/tracking`} className="primary-btn">Theo dõi đơn</Link>

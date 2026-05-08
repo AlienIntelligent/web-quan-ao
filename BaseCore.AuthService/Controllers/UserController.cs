@@ -99,7 +99,7 @@ namespace BaseCore.AuthService.Controllers
                     UserType = request.UserType
                 };
 
-                var createdUser = await _userService.Create(user, request.Password);
+                var createdUser = await _userService.Create(user, request.Password, true);
 
                 return CreatedAtAction(nameof(GetById), new { id = createdUser.Id }, new UserResponse
                 {

@@ -15,9 +15,13 @@ public partial class OrderDetail
 
     public decimal UnitPrice { get; set; }
 
+    public int? VariantId { get; set; }
+
     public virtual Order Order { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual ProductVariant? ProductVariant { get; set; }
 }
 
 

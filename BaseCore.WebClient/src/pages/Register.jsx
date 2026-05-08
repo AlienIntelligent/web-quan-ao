@@ -16,6 +16,7 @@ const Register = () => {
     city: "",
     country: "",
     zipCode: "",
+    userType: 2, // Default to Customer (2)
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -55,6 +56,8 @@ const Register = () => {
           formData.username.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
+        userType: formData.userType,
+        isActive: false // Chờ admin duyệt
       };
 
       const response = await authApi.register(payload);
@@ -202,6 +205,21 @@ const Register = () => {
                       value={formData.zipCode}
                       onChange={handleChange}
                     />
+                  </div>
+                  <div className="group-input">
+                    <label htmlFor="userType">Vai trò người dùng</label>
+                    <select
+                      id="userType"
+                      name="userType"
+                      className="form-control"
+                      value={formData.userType}
+                      onChange={(e) => setFormData({...formData, userType: parseInt(e.target.value)})}
+                      style={{ height: '50px', border: '1px solid #ebebeb', paddingLeft: '20px' }}
+                    >
+                      <option value={2}>Khách hàng (Customer)</option>
+                      <option value={1}>Quản trị viên (Admin)</option>
+                      <option value={3}>Quản lý (Manager)</option>
+                    </select>
                   </div>
                   <button
                     type="submit"

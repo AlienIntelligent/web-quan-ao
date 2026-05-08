@@ -67,6 +67,16 @@ const MainLayout = ({ children }) => {
         </Link>
 
         <div className="sidebar">
+          {/* User Panel in Sidebar (Added to match reference style) */}
+          <div className="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div className="image">
+              <i className="fas fa-user-circle fa-2x text-light"></i>
+            </div>
+            <div className="info">
+              <Link to="#" className="d-block">{user?.name || user?.username}</Link>
+            </div>
+          </div>
+
           <nav className="mt-2">
             <ul
               className="nav nav-pills nav-sidebar flex-column"

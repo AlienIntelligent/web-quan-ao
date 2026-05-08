@@ -44,6 +44,12 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
+    public virtual DbSet<Size> Sizes { get; set; }
+
+    public virtual DbSet<Color> Colors { get; set; }
+
+    public virtual DbSet<WishlistItem> WishlistItems { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Data Source=neyuhtlap\\sqlexpress;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True");
 
@@ -51,7 +57,7 @@ public partial class AppDbContext : DbContext
     {
         modelBuilder.Entity<CartDetail>(entity =>
         {
-            entity.HasIndex(e => new { e.UserId, e.ProductId }, "UQ_CartDetails_User_Product").IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.ProductId, e.VariantId }, "UQ_CartDetails_User_Product_Variant").IsUnique();
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Quantity).HasDefaultValue(1);
@@ -61,7 +67,26 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
 
+            entity.HasOne(d => d.ProductVariant).WithMany()
+                .HasForeignKey(d => d.VariantId);
+
             entity.HasOne(d => d.User).WithMany(p => p.CartDetails).HasForeignKey(d => d.UserId);
+        });
+
+        modelBuilder.Entity<WishlistItem>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.Product).WithMany()
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.ProductVariant).WithMany()
+                .HasForeignKey(d => d.VariantId);
+
+            entity.HasOne(d => d.User).WithMany(p => p.WishlistItems)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
         modelBuilder.Entity<Category>(entity =>
@@ -74,10 +99,20 @@ public partial class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.UserId, "IX_Orders_UserId");
 
+            entity.Property(e => e.OrderDate).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Status).HasMaxLength(30);
             entity.Property(e => e.ShippingAddress).HasMaxLength(500);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OrderCode).HasMaxLength(20);
+            entity.Property(e => e.PaymentMethod).HasMaxLength(30);
+            entity.Property(e => e.PaymentStatus).HasMaxLength(30);
+            entity.Property(e => e.ShippingFee).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.CancelledReason).HasMaxLength(200);
 
-            entity.HasOne(d => d.User).WithMany()
+            entity.HasOne(d => d.User).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
         });
@@ -95,6 +130,10 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.ProductVariant).WithMany(p => p.OrderDetails)
+                .HasForeignKey(d => d.VariantId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<OrderPromotion>(entity =>
@@ -146,6 +185,23 @@ public partial class AppDbContext : DbContext
                 .WithMany(p => p.ProductVariants)
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.SizeNavigation).WithMany(p => p.ProductVariants)
+                .HasForeignKey(d => d.SizeId);
+
+            entity.HasOne(d => d.ColorNavigation).WithMany(p => p.ProductVariants)
+                .HasForeignKey(d => d.ColorId);
+        });
+
+        modelBuilder.Entity<Size>(entity =>
+        {
+            entity.Property(e => e.Name).HasMaxLength(10);
+        });
+
+        modelBuilder.Entity<Color>(entity =>
+        {
+            entity.Property(e => e.Name).HasMaxLength(50);
+            entity.Property(e => e.HexCode).HasMaxLength(7);
         });
 
         modelBuilder.Entity<Review>(entity =>

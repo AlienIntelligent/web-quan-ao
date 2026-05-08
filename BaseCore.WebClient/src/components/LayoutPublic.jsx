@@ -7,11 +7,15 @@ const LayoutPublic = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    if (window.initFashiTemplate) {
-      setTimeout(() => {
+    const init = () => {
+      if (window.initFashiTemplate && typeof jQuery !== 'undefined') {
         window.initFashiTemplate();
-      }, 100);
-    }
+      }
+    };
+    
+    // Give some time for all scripts to be ready
+    const timer = setTimeout(init, 300);
+    return () => clearTimeout(timer);
   }, [location.pathname]);
 
   return (

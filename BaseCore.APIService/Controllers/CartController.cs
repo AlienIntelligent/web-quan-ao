@@ -36,7 +36,7 @@ namespace BaseCore.APIService.Controllers
 
             try
             {
-                var item = await _cartService.AddToCartAsync(userId, dto.ProductId, dto.Quantity, dto.UnitPrice);
+                var item = await _cartService.AddToCartAsync(userId, dto.ProductId, dto.VariantId, dto.Quantity, dto.UnitPrice);
                 return Ok(item);
             }
             catch (Exception ex)
@@ -53,7 +53,7 @@ namespace BaseCore.APIService.Controllers
 
             try
             {
-                var item = await _cartService.UpdateCartItemAsync(userId, dto.ProductId, dto.Quantity);
+                var item = await _cartService.UpdateCartItemAsync(userId, dto.ProductId, dto.VariantId, dto.Quantity);
                 return Ok(item);
             }
             catch (Exception ex)
@@ -62,15 +62,15 @@ namespace BaseCore.APIService.Controllers
             }
         }
 
-        [HttpDelete("remove/{productId}")]
-        public async Task<IActionResult> RemoveFromCart(int productId)
+        [HttpDelete("remove")]
+        public async Task<IActionResult> RemoveFromCart([FromQuery] int productId, [FromQuery] int? variantId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             try
             {
-                await _cartService.RemoveFromCartAsync(userId, productId);
+                await _cartService.RemoveFromCartAsync(userId, productId, variantId);
                 return Ok(new { message = "Item removed" });
             }
             catch (Exception ex)
@@ -93,6 +93,7 @@ namespace BaseCore.APIService.Controllers
     public class AddToCartDto
     {
         public int ProductId { get; set; }
+        public int? VariantId { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
     }
@@ -100,6 +101,7 @@ namespace BaseCore.APIService.Controllers
     public class UpdateCartItemDto
     {
         public int ProductId { get; set; }
+        public int? VariantId { get; set; }
         public int Quantity { get; set; }
     }
 }

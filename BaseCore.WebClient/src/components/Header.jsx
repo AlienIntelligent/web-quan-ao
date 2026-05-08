@@ -206,6 +206,11 @@ const Header = () => {
             </div>
             <div className="col-lg-2 text-right col-md-2">
               <ul className="nav-right">
+                <li className="heart-icon">
+                  <Link to="/wishlist" title="Yêu thích">
+                    <i className="icon_heart_alt"></i>
+                  </Link>
+                </li>
                 <li className="order-icon">
                   <Link to="/my-orders" title="Đơn mua">
                     <i className="fa fa-list-alt"></i>

@@ -53,12 +53,18 @@ namespace BaseCore.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex(new[] { "UserId", "ProductId" }, "UQ_CartDetails_User_Product")
-                        .IsUnique();
+                    b.HasIndex("VariantId");
+
+                    b.HasIndex(new[] { "UserId", "ProductId", "VariantId" }, "UQ_CartDetails_User_Product_Variant")
+                        .IsUnique()
+                        .HasFilter("[VariantId] IS NOT NULL");
 
                     b.ToTable("CartDetails");
                 });
@@ -86,6 +92,28 @@ namespace BaseCore.Repository.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.Color", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("HexCode")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Colors");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -94,17 +122,55 @@ namespace BaseCore.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("OrderDate")
+                    b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CancelledReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("FinalAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("OrderCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("OrderDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("ShippingAddress")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<decimal>("ShippingFee")
+                        .HasColumnType("decimal(18, 2)");
+
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18, 2)");
@@ -140,7 +206,12 @@ namespace BaseCore.Repository.Migrations
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("VariantId");
 
                     b.HasIndex(new[] { "OrderId" }, "IX_OrderDetails_OrderId");
 
@@ -241,6 +312,9 @@ namespace BaseCore.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<decimal?>("OriginalPrice")
+                        .HasColumnType("decimal(18, 2)");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18, 2)");
 
@@ -276,6 +350,49 @@ namespace BaseCore.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("ProductOrigins");
+                });
+
+            modelBuilder.Entity("BaseCore.Entities.ProductVariant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("ColorId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Size")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int?>("SizeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ColorId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SizeId");
+
+                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("BaseCore.Entities.Promotion", b =>
@@ -368,6 +485,43 @@ namespace BaseCore.Repository.Migrations
                     b.ToTable("PromotionProducts");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.Review", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reviews", (string)null);
+                });
+
             modelBuilder.Entity("BaseCore.Entities.Shipping", b =>
                 {
                     b.Property<int>("Id")
@@ -440,6 +594,27 @@ namespace BaseCore.Repository.Migrations
                     b.ToTable("Shippings");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.Size", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Sizes");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -503,6 +678,40 @@ namespace BaseCore.Repository.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.WishlistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("VariantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("VariantId");
+
+                    b.ToTable("WishlistItems");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.CartDetail", b =>
                 {
                     b.HasOne("BaseCore.Entities.Product", "Product")
@@ -516,7 +725,13 @@ namespace BaseCore.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BaseCore.Entities.ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("VariantId");
+
                     b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
 
                     b.Navigation("User");
                 });
@@ -524,7 +739,7 @@ namespace BaseCore.Repository.Migrations
             modelBuilder.Entity("BaseCore.Entities.Order", b =>
                 {
                     b.HasOne("BaseCore.Entities.User", "User")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .IsRequired();
 
@@ -544,9 +759,16 @@ namespace BaseCore.Repository.Migrations
                         .HasForeignKey("ProductId")
                         .IsRequired();
 
+                    b.HasOne("BaseCore.Entities.ProductVariant", "ProductVariant")
+                        .WithMany("OrderDetails")
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
                 });
 
             modelBuilder.Entity("BaseCore.Entities.OrderPromotion", b =>
@@ -596,6 +818,29 @@ namespace BaseCore.Repository.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.ProductVariant", b =>
+                {
+                    b.HasOne("BaseCore.Entities.Color", "ColorNavigation")
+                        .WithMany("ProductVariants")
+                        .HasForeignKey("ColorId");
+
+                    b.HasOne("BaseCore.Entities.Product", "Product")
+                        .WithMany("ProductVariants")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BaseCore.Entities.Size", "SizeNavigation")
+                        .WithMany("ProductVariants")
+                        .HasForeignKey("SizeId");
+
+                    b.Navigation("ColorNavigation");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SizeNavigation");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.PromotionProduct", b =>
                 {
                     b.HasOne("BaseCore.Entities.Product", "Product")
@@ -615,6 +860,25 @@ namespace BaseCore.Repository.Migrations
                     b.Navigation("Promotion");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.Review", b =>
+                {
+                    b.HasOne("BaseCore.Entities.Product", "Product")
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BaseCore.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.Shipping", b =>
                 {
                     b.HasOne("BaseCore.Entities.Order", "Order")
@@ -626,9 +890,37 @@ namespace BaseCore.Repository.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.WishlistItem", b =>
+                {
+                    b.HasOne("BaseCore.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .IsRequired();
+
+                    b.HasOne("BaseCore.Entities.User", "User")
+                        .WithMany("WishlistItems")
+                        .HasForeignKey("UserId")
+                        .IsRequired();
+
+                    b.HasOne("BaseCore.Entities.ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("VariantId");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("BaseCore.Entities.Color", b =>
+                {
+                    b.Navigation("ProductVariants");
                 });
 
             modelBuilder.Entity("BaseCore.Entities.Order", b =>
@@ -653,7 +945,16 @@ namespace BaseCore.Repository.Migrations
 
                     b.Navigation("ProductOrigin");
 
+                    b.Navigation("ProductVariants");
+
                     b.Navigation("PromotionProducts");
+
+                    b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("BaseCore.Entities.ProductVariant", b =>
+                {
+                    b.Navigation("OrderDetails");
                 });
 
             modelBuilder.Entity("BaseCore.Entities.Promotion", b =>
@@ -663,9 +964,18 @@ namespace BaseCore.Repository.Migrations
                     b.Navigation("PromotionProducts");
                 });
 
+            modelBuilder.Entity("BaseCore.Entities.Size", b =>
+                {
+                    b.Navigation("ProductVariants");
+                });
+
             modelBuilder.Entity("BaseCore.Entities.User", b =>
                 {
                     b.Navigation("CartDetails");
+
+                    b.Navigation("Orders");
+
+                    b.Navigation("WishlistItems");
                 });
 #pragma warning restore 612, 618
         }

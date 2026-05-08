@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
-import { cartStorage, categoryApi, productApi } from "../services/api";
-import { alertSuccess } from "../services/swal";
+import { cartStorage, categoryApi, productApi, metadataApi, wishlistApi } from "../services/api";
+import { alertSuccess, alertError } from "../services/swal";
 
 const Shop = () => {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sizes, setSizes] = useState([]);
+  const [colors, setColors] = useState([]);
+  
   const [keyword, setKeyword] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [sizeId, setSizeId] = useState("");
+  const [colorId, setColorId] = useState("");
+  
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [wishlist, setWishlist] = useState([]);
 
   const loadData = async (filters) => {
     const response = await productApi.search({
@@ -23,6 +30,8 @@ const Shop = () => {
       categoryId: filters.categoryId || undefined,
       minPrice: filters.minPrice || undefined,
       maxPrice: filters.maxPrice || undefined,
+      sizeId: filters.sizeId || undefined,
+      colorId: filters.colorId || undefined,
       page: filters.page,
       pageSize: 40,
     });
@@ -30,8 +39,36 @@ const Shop = () => {
     setTotalPages(response.data.totalPages || 1);
   };
 
+  const loadMetadata = async () => {
+    try {
+      const [catRes, sizeRes, colorRes] = await Promise.all([
+        categoryApi.getAll(),
+        metadataApi.getSizes(),
+        metadataApi.getColors()
+      ]);
+      setCategories(catRes.data || []);
+      setSizes(sizeRes.data || []);
+      setColors(colorRes.data || []);
+    } catch (err) {
+      console.error("Failed to load metadata", err);
+    }
+  };
+
+  const loadWishlist = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await wishlistApi.get();
+        setWishlist(res.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load wishlist", err);
+    }
+  };
+
   useEffect(() => {
-    categoryApi.getAll().then((res) => setCategories(res.data || []));
+    loadMetadata();
+    loadWishlist();
   }, []);
 
   useEffect(() => {
@@ -41,6 +78,8 @@ const Shop = () => {
       categoryId: searchParams.get("categoryId") || "",
       minPrice: searchParams.get("minPrice") || "",
       maxPrice: searchParams.get("maxPrice") || "",
+      sizeId: searchParams.get("sizeId") || "",
+      colorId: searchParams.get("colorId") || "",
       page: Number.isFinite(queryPage) && queryPage > 0 ? queryPage : 1,
     };
 
@@ -48,8 +87,11 @@ const Shop = () => {
     setCategoryId(nextFilters.categoryId);
     setMinPrice(nextFilters.minPrice);
     setMaxPrice(nextFilters.maxPrice);
+    setSizeId(nextFilters.sizeId);
+    setColorId(nextFilters.colorId);
     setPage(nextFilters.page);
     setError("");
+    
     loadData(nextFilters).catch(() => {
       setItems([]);
       setTotalPages(1);
@@ -60,13 +102,15 @@ const Shop = () => {
   const buildSearchParams = (nextPage = 1) => {
     const params = new URLSearchParams();
     const normalizedKeyword = keyword.trim();
-    const normalizedMinPrice = minPrice.trim();
-    const normalizedMaxPrice = maxPrice.trim();
+    const normalizedMinPrice = String(minPrice).trim();
+    const normalizedMaxPrice = String(maxPrice).trim();
 
     if (normalizedKeyword) params.set("keyword", normalizedKeyword);
     if (categoryId) params.set("categoryId", categoryId);
     if (normalizedMinPrice) params.set("minPrice", normalizedMinPrice);
     if (normalizedMaxPrice) params.set("maxPrice", normalizedMaxPrice);
+    if (sizeId) params.set("sizeId", sizeId);
+    if (colorId) params.set("colorId", colorId);
     if (nextPage > 1) params.set("page", String(nextPage));
 
     return params;
@@ -93,6 +137,28 @@ const Shop = () => {
   const addToCart = (product) => {
     cartStorage.addItem(product, 1);
     alertSuccess("Đã thêm!", `${product.name} đã được thêm vào giỏ hàng.`);
+  };
+
+  const toggleWishlist = async (productId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alertError("Lỗi", "Vui lòng đăng nhập để sử dụng tính năng này.");
+      return;
+    }
+
+    try {
+      const isInWishlist = wishlist.some(x => x.productId === productId);
+      if (isInWishlist) {
+        await wishlistApi.remove(productId);
+        alertSuccess("Đã xóa!", "Sản phẩm đã được xóa khỏi danh sách yêu thích.");
+      } else {
+        await wishlistApi.add(productId);
+        alertSuccess("Đã thêm!", "Sản phẩm đã được thêm vào danh sách yêu thích.");
+      }
+      loadWishlist();
+    } catch (err) {
+      alertError("Lỗi", "Không thể cập nhật danh sách yêu thích.");
+    }
   };
 
   const resolveProductImage = (item) => {
@@ -122,9 +188,10 @@ const Shop = () => {
             {/* Sidebar Filters */}
             <div className="col-lg-2 col-md-3">
               <div className="shopee-sidebar">
+                {/* Categories */}
                 <div className="filter-group mb-4">
                   <h5 className="filter-title">
-                    <i className="fa fa-list mr-2"></i>TẤT CẢ DANH MỤC
+                    <i className="fa fa-list mr-2"></i>DANH MỤC
                   </h5>
                   <ul className="filter-list mt-3">
                     <li
@@ -151,17 +218,12 @@ const Shop = () => {
                   </ul>
                 </div>
 
-                <div className="filter-group mb-4">
+                {/* Price Range */}
+                <div className="filter-group mb-4 border-top pt-3">
                   <h5 className="filter-title">
-                    <i className="fa fa-filter mr-2"></i>BỘ LỌC TÌM KIẾM
+                    <i className="fa fa-filter mr-2"></i>KHOẢNG GIÁ
                   </h5>
                   <div className="filter-content mt-3">
-                    <p
-                      className="mb-2 font-weight-bold"
-                      style={{ fontSize: "14px" }}
-                    >
-                      Khoảng giá
-                    </p>
                     <div className="d-flex align-items-center mb-2">
                       <input
                         type="number"
@@ -185,11 +247,51 @@ const Shop = () => {
                     >
                       ÁP DỤNG
                     </button>
-                    {error && (
-                      <small className="text-danger mt-1 d-block">
-                        {error}
-                      </small>
-                    )}
+                  </div>
+                </div>
+
+                {/* Sizes Filter */}
+                <div className="filter-group mb-4 border-top pt-3">
+                  <h5 className="filter-title">KÍCH THƯỚC</h5>
+                  <div className="filter-content mt-2 d-flex flex-wrap">
+                    {sizes.map(s => (
+                      <div 
+                        key={s.id} 
+                        className={`filter-tag ${sizeId == s.id ? 'active' : ''}`}
+                        onClick={() => {
+                          const nextSize = sizeId == s.id ? "" : s.id;
+                          setSizeId(nextSize);
+                          // We use a small timeout to let state update or just call setSearchParams directly
+                          const p = buildSearchParams(1);
+                          if (nextSize) p.set("sizeId", nextSize); else p.delete("sizeId");
+                          setSearchParams(p);
+                        }}
+                      >
+                        {s.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Colors Filter */}
+                <div className="filter-group mb-4 border-top pt-3">
+                  <h5 className="filter-title">MÀU SẮC</h5>
+                  <div className="filter-content mt-2 d-flex flex-wrap">
+                    {colors.map(c => (
+                      <div 
+                        key={c.id} 
+                        className={`filter-tag color-tag ${colorId == c.id ? 'active' : ''}`}
+                        onClick={() => {
+                          const nextColor = colorId == c.id ? "" : c.id;
+                          setColorId(nextColor);
+                          const p = buildSearchParams(1);
+                          if (nextColor) p.set("colorId", nextColor); else p.delete("colorId");
+                          setSearchParams(p);
+                        }}
+                      >
+                        {c.name}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -201,11 +303,18 @@ const Shop = () => {
                       setCategoryId("");
                       setMinPrice("");
                       setMaxPrice("");
+                      setSizeId("");
+                      setColorId("");
                       setSearchParams(new URLSearchParams());
                     }}
                   >
                     XÓA TẤT CẢ
                   </button>
+                  {error && (
+                    <small className="text-danger mt-2 d-block text-center">
+                      {error}
+                    </small>
+                  )}
                 </div>
               </div>
             </div>
@@ -297,10 +406,14 @@ const Shop = () => {
                             </Link>
                           </li>
                           <li className="w-icon">
-                            <Link to={`/shop?categoryId=${item.categoryId}`}>
-                              <i className="fa fa-random"></i>
-                              <span className="tooltip-text">Tương tự</span>
-                            </Link>
+                            <a 
+                              href="#" 
+                              onClick={(e) => { e.preventDefault(); toggleWishlist(item.id); }}
+                              className={wishlist.some(x => x.productId === item.id) ? "text-warning" : ""}
+                            >
+                              <i className={wishlist.some(x => x.productId === item.id) ? "fa fa-heart" : "fa fa-heart-o"}></i>
+                              <span className="tooltip-text">Yêu thích</span>
+                            </a>
                           </li>
                         </ul>
                       </div>

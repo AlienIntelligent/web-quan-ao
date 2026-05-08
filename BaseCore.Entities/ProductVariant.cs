@@ -16,6 +16,16 @@ public partial class ProductVariant
 
     public decimal Price { get; set; }
 
+    public int? SizeId { get; set; }
+
+    public int? ColorId { get; set; }
+
     public virtual Product Product { get; set; } = null!;
+
+    public virtual Size? SizeNavigation { get; set; }
+
+    public virtual Color? ColorNavigation { get; set; }
+
+    public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 }
 

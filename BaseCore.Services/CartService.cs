@@ -12,13 +12,16 @@ namespace BaseCore.Services
     {
         private readonly ICartDetailRepository _cartDetailRepository;
         private readonly IRepository<Product> _productRepository;
+        private readonly IRepository<ProductVariant> _variantRepository;
 
         public CartService(
             ICartDetailRepository cartDetailRepository,
-            IRepository<Product> productRepository)
+            IRepository<Product> productRepository,
+            IRepository<ProductVariant> variantRepository)
         {
             _cartDetailRepository = cartDetailRepository;
             _productRepository = productRepository;
+            _variantRepository = variantRepository;
         }
 
         public async Task<List<CartDetail>> GetCartItemsAsync(string userId)
@@ -30,7 +33,7 @@ namespace BaseCore.Services
             return cartItems;
         }
 
-        public async Task<CartDetail> AddToCartAsync(string userId, int productId, int quantity, decimal unitPrice)
+        public async Task<CartDetail> AddToCartAsync(string userId, int productId, int? variantId, int quantity, decimal unitPrice)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentException("User ID cannot be empty", nameof(userId));
@@ -49,15 +52,28 @@ namespace BaseCore.Services
             if (product == null)
                 throw new InvalidOperationException($"Product with ID {productId} not found");
 
-            // Check stock
-            if (product.Stock < quantity)
-                throw new InvalidOperationException($"Insufficient stock. Available: {product.Stock}");
+            // Check variant and stock
+            if (variantId.HasValue)
+            {
+                var variant = await _variantRepository.GetByIdAsync(variantId.Value);
+                if (variant == null || variant.ProductId != productId)
+                    throw new InvalidOperationException("Invalid product variant");
 
-            // Check if product already in cart
-            var existingCartItem = await _cartDetailRepository.GetByUserAndProductAsync(userId, productId);
+                if (variant.Stock < quantity)
+                    throw new InvalidOperationException($"Insufficient stock for variant. Available: {variant.Stock}");
+            }
+            else
+            {
+                if (product.Stock < quantity)
+                    throw new InvalidOperationException($"Insufficient stock. Available: {product.Stock}");
+            }
+
+            // Check if product already in cart (with same variant)
+            var existingCartItem = await _cartDetailRepository.GetByUserProductAndVariantAsync(userId, productId, variantId);
             if (existingCartItem != null)
             {
                 existingCartItem.Quantity += quantity;
+                existingCartItem.UpdatedAt = DateTime.UtcNow;
                 await _cartDetailRepository.UpdateAsync(existingCartItem);
                 return existingCartItem;
             }
@@ -67,6 +83,7 @@ namespace BaseCore.Services
             {
                 UserId = userId,
                 ProductId = productId,
+                VariantId = variantId,
                 Quantity = quantity,
                 UnitPrice = unitPrice,
                 CreatedAt = DateTime.UtcNow
@@ -75,7 +92,7 @@ namespace BaseCore.Services
             return await _cartDetailRepository.AddAsync(cartItem);
         }
 
-        public async Task<CartDetail> UpdateCartItemAsync(string userId, int productId, int quantity)
+        public async Task<CartDetail> UpdateCartItemAsync(string userId, int productId, int? variantId, int quantity)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentException("User ID cannot be empty", nameof(userId));
@@ -86,14 +103,23 @@ namespace BaseCore.Services
             if (quantity <= 0)
                 throw new ArgumentException("Quantity must be greater than 0", nameof(quantity));
 
-            var cartItem = await _cartDetailRepository.GetByUserAndProductAsync(userId, productId);
+            var cartItem = await _cartDetailRepository.GetByUserProductAndVariantAsync(userId, productId, variantId);
             if (cartItem == null)
-                throw new InvalidOperationException($"Product not in cart");
+                throw new InvalidOperationException($"Product variant not in cart");
 
             // Check stock
-            var product = await _productRepository.GetByIdAsync(productId);
-            if (product.Stock < quantity)
-                throw new InvalidOperationException($"Insufficient stock. Available: {product.Stock}");
+            if (variantId.HasValue)
+            {
+                var variant = await _variantRepository.GetByIdAsync(variantId.Value);
+                if (variant.Stock < quantity)
+                    throw new InvalidOperationException($"Insufficient stock for variant. Available: {variant.Stock}");
+            }
+            else
+            {
+                var product = await _productRepository.GetByIdAsync(productId);
+                if (product.Stock < quantity)
+                    throw new InvalidOperationException($"Insufficient stock. Available: {product.Stock}");
+            }
 
             cartItem.Quantity = quantity;
             cartItem.UpdatedAt = DateTime.UtcNow;
@@ -101,7 +127,7 @@ namespace BaseCore.Services
             return cartItem;
         }
 
-        public async Task RemoveFromCartAsync(string userId, int productId)
+        public async Task RemoveFromCartAsync(string userId, int productId, int? variantId)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentException("User ID cannot be empty", nameof(userId));
@@ -109,9 +135,9 @@ namespace BaseCore.Services
             if (productId <= 0)
                 throw new ArgumentException("Invalid product ID", nameof(productId));
 
-            var cartItem = await _cartDetailRepository.GetByUserAndProductAsync(userId, productId);
+            var cartItem = await _cartDetailRepository.GetByUserProductAndVariantAsync(userId, productId, variantId);
             if (cartItem == null)
-                throw new InvalidOperationException($"Product not in cart");
+                throw new InvalidOperationException($"Product variant not in cart");
 
             await _cartDetailRepository.DeleteAsync(cartItem);
         }
@@ -148,7 +174,7 @@ namespace BaseCore.Services
             return await _cartDetailRepository.GetCartWithDetailsAsync(userId);
         }
 
-        public async Task<bool> IsProductInCartAsync(string userId, int productId)
+        public async Task<bool> IsProductInCartAsync(string userId, int productId, int? variantId)
         {
             if (string.IsNullOrWhiteSpace(userId))
                 throw new ArgumentException("User ID cannot be empty", nameof(userId));
@@ -156,7 +182,7 @@ namespace BaseCore.Services
             if (productId <= 0)
                 throw new ArgumentException("Invalid product ID", nameof(productId));
 
-            var cartItem = await _cartDetailRepository.GetByUserAndProductAsync(userId, productId);
+            var cartItem = await _cartDetailRepository.GetByUserProductAndVariantAsync(userId, productId, variantId);
             return cartItem != null;
         }
     }

@@ -10,10 +10,10 @@ namespace BaseCore.Services
 {
     public class ProductService : IProductService
     {
-        private readonly IRepository<Product> _productRepository;
+        private readonly IProductRepository _productRepository;
         private readonly IRepository<Category> _categoryRepository;
 
-        public ProductService(IRepository<Product> productRepository, IRepository<Category> categoryRepository)
+        public ProductService(IProductRepository productRepository, IRepository<Category> categoryRepository)
         {
             _productRepository = productRepository;
             _categoryRepository = categoryRepository;
@@ -24,7 +24,7 @@ namespace BaseCore.Services
             var products = await _productRepository.GetAllAsync();
             var productList = products.ToList();
 
-            // Load categories manually if not using Include (keeping logic similar for now)
+            // Load categories manually if not using Include
             foreach (var product in productList)
             {
                 product.Category = await _categoryRepository.GetByIdAsync(product.CategoryId);
@@ -60,31 +60,9 @@ namespace BaseCore.Services
             await _productRepository.DeleteByIdAsync(id);
         }
 
-        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, decimal? minPrice, decimal? maxPrice, int page, int pageSize)
+        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, decimal? minPrice, decimal? maxPrice, int? sizeId, int? colorId, int page, int pageSize)
         {
-            var result = await _productRepository.GetPagedAsync(
-                page, 
-                pageSize, 
-                p => (string.IsNullOrEmpty(keyword) || 
-                      p.Name.Contains(keyword) || 
-                      p.Description.Contains(keyword) ||
-                      p.Category.Name.Contains(keyword) ||
-                      (p.ProductOrigin != null && p.ProductOrigin.Origin.Name.Contains(keyword))) &&
-                     (!categoryId.HasValue || p.CategoryId == categoryId.Value) &&
-                     (!minPrice.HasValue || p.Price >= minPrice.Value) &&
-                     (!maxPrice.HasValue || p.Price <= maxPrice.Value),
-                p => p.Id,
-                true,
-                p => p.Category,
-                p => p.ProductOrigin.Origin);
-
-            var products = result.Items.ToList();
-
-            return (products, result.TotalCount);
+            return await _productRepository.SearchAsync(keyword, categoryId, minPrice, maxPrice, sizeId, colorId, page, pageSize);
         }
     }
 }
-
-
-
-

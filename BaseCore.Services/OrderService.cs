@@ -13,6 +13,9 @@ namespace BaseCore.Services
         private readonly IRepository<Order> _orderRepository;
         private readonly IRepository<OrderDetail> _orderDetailRepository;
         private readonly IRepository<Product> _productRepository;
+        private readonly IRepository<ProductVariant> _variantRepository;
+        private readonly IRepository<OrderPromotion> _orderPromotionRepository;
+        private readonly IPromotionService _promotionService;
         private readonly ICartService _cartService;
         private readonly AppDbContext _context;
 
@@ -20,23 +23,142 @@ namespace BaseCore.Services
             IRepository<Order> orderRepository, 
             IRepository<OrderDetail> orderDetailRepository,
             IRepository<Product> productRepository,
+            IRepository<ProductVariant> variantRepository,
+            IRepository<OrderPromotion> orderPromotionRepository,
+            IPromotionService promotionService,
             ICartService cartService,
             AppDbContext context)
         {
             _orderRepository = orderRepository;
             _orderDetailRepository = orderDetailRepository;
             _productRepository = productRepository;
+            _variantRepository = variantRepository;
+            _orderPromotionRepository = orderPromotionRepository;
+            _promotionService = promotionService;
             _cartService = cartService;
             _context = context;
         }
 
-        public async Task<Order> CreateOrderAsync(Order order)
+        private string GenerateOrderCode()
         {
-            order.OrderDate = DateTime.UtcNow;
-            order.Status = "Pending";
+            return $"ORD-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 4).ToUpper()}";
+        }
 
-            await _orderRepository.AddAsync(order);
-            return order;
+        public async Task<Order> CreateOrderAsync(
+            string userId, 
+            List<(int ProductId, int? VariantId, int Quantity)> items, 
+            string shippingAddress, 
+            decimal shippingFee,
+            string? promotionCode = null,
+            string? paymentMethod = null,
+            string? note = null)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                decimal subtotal = 0;
+                var orderDetails = new List<OrderDetail>();
+
+                foreach (var item in items)
+                {
+                    var product = await _productRepository.GetByIdAsync(item.ProductId);
+                    if (product == null) throw new InvalidOperationException($"Sản phẩm #{item.ProductId} không tồn tại");
+
+                    decimal unitPrice = product.Price;
+                    
+                    if (item.VariantId.HasValue)
+                    {
+                        var variant = await _variantRepository.GetByIdAsync(item.VariantId.Value);
+                        if (variant == null || variant.ProductId != item.ProductId)
+                            throw new InvalidOperationException($"Biến thể #{item.VariantId} không hợp lệ cho sản phẩm {product.Name}");
+
+                        if (variant.Stock < item.Quantity)
+                            throw new InvalidOperationException($"Biến thể của sản phẩm {product.Name} không đủ tồn kho");
+
+                        unitPrice = variant.Price;
+                        variant.Stock -= item.Quantity;
+                        _context.Set<ProductVariant>().Update(variant);
+                    }
+                    else
+                    {
+                        if (product.Stock < item.Quantity)
+                            throw new InvalidOperationException($"Sản phẩm {product.Name} không đủ tồn kho");
+                        
+                        product.Stock -= item.Quantity;
+                        _context.Set<Product>().Update(product);
+                    }
+
+                    subtotal += unitPrice * item.Quantity;
+                    orderDetails.Add(new OrderDetail
+                    {
+                        ProductId = item.ProductId,
+                        VariantId = item.VariantId,  // null when no variant - fixes FK violation
+                        Quantity = item.Quantity,
+                        UnitPrice = unitPrice
+                    });
+                }
+
+                PromotionApplicationResult? promotionResult = null;
+                if (!string.IsNullOrWhiteSpace(promotionCode))
+                {
+                    promotionResult = await _promotionService.ApplyPromotionAsync(promotionCode, subtotal, shippingFee);
+                }
+
+                var totalAmount = subtotal + shippingFee;
+                var discountAmount = promotionResult?.DiscountAmount ?? 0;
+                var finalAmount = promotionResult?.FinalTotal ?? (totalAmount - discountAmount);
+
+                var order = new Order
+                {
+                    UserId = userId,
+                    OrderCode = GenerateOrderCode(),
+                    OrderDate = DateTime.Now,
+                    TotalAmount = totalAmount,
+                    DiscountAmount = discountAmount,
+                    FinalAmount = finalAmount,
+                    ShippingFee = shippingFee,
+                    Status = "PENDING",
+                    PaymentMethod = paymentMethod ?? "COD",
+                    PaymentStatus = "Pending",
+                    ShippingAddress = shippingAddress,
+                    Note = note
+                };
+
+                // Save stock changes + order together
+                await _context.Set<Order>().AddAsync(order);
+                await _context.SaveChangesAsync(); // Gets order.Id
+
+                foreach (var detail in orderDetails)
+                {
+                    detail.OrderId = order.Id;
+                    await _context.Set<OrderDetail>().AddAsync(detail);
+                }
+
+                if (promotionResult != null)
+                {
+                    await _context.Set<OrderPromotion>().AddAsync(new OrderPromotion
+                    {
+                        OrderId = order.Id,
+                        PromotionId = promotionResult.Promotion.Id,
+                        DiscountAmount = promotionResult.DiscountAmount,
+                        AppliedAt = DateTime.Now
+                    });
+
+                    promotionResult.Promotion.UsedCount += 1;
+                    _context.Set<Promotion>().Update(promotionResult.Promotion);
+                }
+
+                // Save details, promotions and stock changes in one shot
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                order.OrderDetailOrders = orderDetails;
+                return order;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<Order> CheckoutAsync(string userId, string shippingAddress)
@@ -47,66 +169,30 @@ namespace BaseCore.Services
                 throw new InvalidOperationException("Giỏ hàng của bạn đang trống.");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                // Create Order
-                var order = new Order
-                {
-                    UserId = userId,
-                    OrderDate = DateTime.Now,
-                    TotalAmount = cart.Total,
-                    Status = "Pending",
-                    ShippingAddress = shippingAddress
-                };
-
-                // Add order (Repository calls SaveChanges internally)
-                var createdOrder = await _orderRepository.AddAsync(order);
-
-                // Create OrderDetails and Update Stock
-                foreach (var cartItem in cart.Items)
-                {
-                    var product = await _productRepository.GetByIdAsync(cartItem.ProductId);
-                    if (product == null) throw new InvalidOperationException($"Không tìm thấy sản phẩm #{cartItem.ProductId}");
-                    
-                    if (product.Stock < cartItem.Quantity) 
-                        throw new InvalidOperationException($"Sản phẩm '{product.Name}' đã hết hàng hoặc không đủ số lượng.");
-
-                    // Reduce Stock
-                    product.Stock -= cartItem.Quantity;
-                    await _productRepository.UpdateAsync(product);
-
-                    // Create Detail
-                    var orderDetail = new OrderDetail
-                    {
-                        OrderId = createdOrder.Id,
-                        ProductId = cartItem.ProductId,
-                        Quantity = cartItem.Quantity,
-                        UnitPrice = cartItem.UnitPrice
-                    };
-                    await _orderDetailRepository.AddAsync(orderDetail);
-                }
-
-                // Clear Cart
-                await _cartService.ClearCartAsync(userId);
-
-                await transaction.CommitAsync();
-                return createdOrder;
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+            var items = cart.Items.Select(i => (i.ProductId, (int?)null, i.Quantity)).ToList();
+            var order = await CreateOrderAsync(userId, items, shippingAddress, 30000); // Default shipping fee
+            
+            await _cartService.ClearCartAsync(userId);
+            return order;
         }
 
         public async Task<Order> UpdateOrderStatusAsync(int orderId, string status)
         {
             var order = await _orderRepository.GetByIdAsync(orderId);
-            if (order == null) throw new InvalidOperationException("Order not found");
+            if (order == null) throw new InvalidOperationException("Không tìm thấy đơn hàng");
 
+            // Chỉ cập nhật Status để tránh lỗi nếu DB thiếu các cột khác (OrderCode, PaymentStatus...)
+            _context.Entry(order).Property(x => x.Status).IsModified = true;
             order.Status = status;
-            await _orderRepository.UpdateAsync(order);
+
+            // Cập nhật PaymentStatus khi giao thành công
+            if (status.Equals("DELIVERED", StringComparison.OrdinalIgnoreCase))
+            {
+                order.PaymentStatus = "Paid";
+                _context.Entry(order).Property(x => x.PaymentStatus).IsModified = true;
+            }
+
+            await _context.SaveChangesAsync();
             return order;
         }
 
@@ -116,13 +202,14 @@ namespace BaseCore.Services
             if (order == null) throw new InvalidOperationException("Không tìm thấy đơn hàng");
             if (order.UserId != userId) throw new InvalidOperationException("Bạn không có quyền hủy đơn hàng này");
 
-            if (order.Status != "Pending" && order.Status != "CHO_XU_LY")
+            if (order.Status != "PENDING" && order.Status != "CONFIRMED")
             {
                 throw new InvalidOperationException("Chỉ đơn hàng ở trạng thái 'Chờ xử lý' mới có thể yêu cầu hủy");
             }
 
-            order.Status = "CHO_DUYET_HUY";
-            await _orderRepository.UpdateAsync(order);
+            order.Status = "PROCESSING";
+            _context.Entry(order).Property(x => x.Status).IsModified = true;
+            await _context.SaveChangesAsync();
             return order;
         }
 
@@ -131,9 +218,9 @@ namespace BaseCore.Services
             var order = await _orderRepository.GetByIdAsync(orderId);
             if (order == null) throw new InvalidOperationException("Không tìm thấy đơn hàng");
 
-            if (order.Status != "CHO_DUYET_HUY")
+            if (order.Status == "DELIVERED")
             {
-                throw new InvalidOperationException("Đơn hàng này không có yêu cầu hủy.");
+                throw new InvalidOperationException("Không thể hủy đơn hàng đã giao thành công.");
             }
 
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -143,17 +230,36 @@ namespace BaseCore.Services
                 var details = await _orderDetailRepository.FindAsync(od => od.OrderId == order.Id);
                 foreach (var detail in details)
                 {
-                    var product = await _productRepository.GetByIdAsync(detail.ProductId);
-                    if (product != null)
+                    if (detail.VariantId.HasValue && detail.VariantId.Value > 0)
                     {
-                        product.Stock += detail.Quantity;
-                        await _productRepository.UpdateAsync(product);
+                        var variant = await _variantRepository.GetByIdAsync(detail.VariantId.Value);
+                        if (variant != null)
+                        {
+                            variant.Stock += detail.Quantity;
+                            _context.Set<ProductVariant>().Update(variant);
+                        }
+                    }
+                    else
+                    {
+                        var product = await _productRepository.GetByIdAsync(detail.ProductId);
+                        if (product != null)
+                        {
+                            product.Stock += detail.Quantity;
+                            _context.Set<Product>().Update(product);
+                        }
                     }
                 }
 
-                order.Status = "HUY";
-                await _orderRepository.UpdateAsync(order);
+                order.Status = "CANCELLED";
+                _context.Entry(order).Property(x => x.Status).IsModified = true;
+                
+                // Thử cập nhật CancelledAt nếu có
+                try {
+                    order.CancelledAt = DateTime.Now;
+                    _context.Entry(order).Property(x => x.CancelledAt).IsModified = true;
+                } catch { }
 
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return order;
             }

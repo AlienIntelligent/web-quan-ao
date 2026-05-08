@@ -12,11 +12,11 @@ const STEPS = [
 ];
 
 const activeStepByStatus = (status) => {
-  if (["DA_VAN_CHUYEN", "Delivered", "DA_GIAO"].includes(status)) return 3;
-  if (["DANG_VAN_CHUYEN", "Shipping"].includes(status)) return 2;
-  if (["CHO_LAY_HANG", "Processing", "Shop xác nhận"].includes(status)) return 1;
-  if (["HUY", "Cancelled", "CHO_DUYET_HUY"].includes(status)) return -1;
-  return 0; // Đã đặt hàng
+  if (["DELIVERED"].includes(status)) return 3;
+  if (["DELIVERING", "SHIPPED"].includes(status)) return 2;
+  if (["CONFIRMED", "PROCESSING"].includes(status)) return 1;
+  if (["CANCELLED", "RETURNED"].includes(status)) return -1;
+  return 0; // PENDING - Đã đặt hàng
 };
 
 const formatMoney = (value) =>
@@ -156,7 +156,7 @@ const OrderTracking = () => {
                       <p><i className="fa fa-truck"></i> Cập nhật vận chuyển theo trạng thái đơn hàng của shop.</p>
                     </div>
                     <Link to="/my-orders" className="outline-btn full-width">Quay lại đơn mua</Link>
-                    {order && !["HUY", "Cancelled", "CHO_DUYET_HUY", "DA_VAN_CHUYEN", "Delivered", "DANG_VAN_CHUYEN", "Shipping"].includes(order.status) && (
+                    {order && !["CANCELLED", "RETURNED", "PROCESSING", "DELIVERED", "DELIVERING", "SHIPPED"].includes(order.status) && (
                       <button 
                         onClick={handleCancel} 
                         className="primary-btn full-width mt-2" 
@@ -165,7 +165,7 @@ const OrderTracking = () => {
                         Hủy đơn
                       </button>
                     )}
-                    {order && order.status === "CHO_DUYET_HUY" && (
+                    {order && order.status === "PROCESSING" && (
                       <div className="alert alert-info mt-3 py-2 text-center" style={{ fontSize: '13px' }}>
                         Đang chờ shop duyệt hủy
                       </div>

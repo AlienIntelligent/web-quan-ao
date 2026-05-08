@@ -7,24 +7,19 @@ const Categories = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-    });
+    const [formData, setFormData] = useState({ name: '', description: '' });
     const [error, setError] = useState('');
     const { isAdmin } = useAuth();
 
-    useEffect(() => {
-        loadCategories();
-    }, []);
+    useEffect(() => { loadCategories(); }, []);
 
     const loadCategories = async () => {
         setLoading(true);
         try {
             const response = await categoryApi.getAll();
             setCategories(response.data || []);
-        } catch (error) {
-            console.error('Failed to load categories:', error);
+        } catch (err) {
+            console.error('Failed to load categories:', err);
         } finally {
             setLoading(false);
         }
@@ -33,16 +28,10 @@ const Categories = () => {
     const openModal = (category = null) => {
         if (category) {
             setEditingCategory(category);
-            setFormData({
-                name: category.name,
-                description: category.description || '',
-            });
+            setFormData({ name: category.name, description: category.description || '' });
         } else {
             setEditingCategory(null);
-            setFormData({
-                name: '',
-                description: '',
-            });
+            setFormData({ name: '', description: '' });
         }
         setError('');
         setShowModal(true);
@@ -57,32 +46,26 @@ const Categories = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
         try {
             if (editingCategory) {
-                await categoryApi.update(editingCategory.id, {
-                    id: editingCategory.id,
-                    ...formData,
-                });
+                await categoryApi.update(editingCategory.id, { id: editingCategory.id, ...formData });
             } else {
                 await categoryApi.create(formData);
             }
-
             closeModal();
             loadCategories();
-        } catch (error) {
-            setError(error.response?.data?.message || 'Operation failed');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this category?')) return;
-
+        if (!window.confirm('Bạn có chắc muốn xóa danh mục này?')) return;
         try {
             await categoryApi.delete(id);
             loadCategories();
-        } catch (error) {
-            alert('Failed to delete category. It may have associated products.');
+        } catch (err) {
+            alert('Xóa thất bại. Danh mục có thể đang được sử dụng.');
         }
     };
 
@@ -119,16 +102,15 @@ const Categories = () => {
                             {loading ? (
                                 <div className="text-center py-5">
                                     <div className="spinner-border text-primary"></div>
-                                    <div className="mt-2">Đang tải dữ liệu...</div>
                                 </div>
                             ) : (
-                                <table className="table table-hover">
+                                <table className="table table-bordered table-striped">
                                     <thead>
                                         <tr>
                                             <th style={{ width: '80px' }}>ID</th>
                                             <th>Tên danh mục</th>
                                             <th>Mô tả</th>
-                                            {isAdmin() && <th style={{ width: '150px' }}>Thao tác</th>}
+                                            {isAdmin() && <th style={{ width: '120px' }}>Thao tác</th>}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -142,7 +124,7 @@ const Categories = () => {
                                             categories.map(category => (
                                                 <tr key={category.id}>
                                                     <td>{category.id}</td>
-                                                    <td className="font-weight-bold text-primary">{category.name}</td>
+                                                    <td>{category.name}</td>
                                                     <td>{category.description}</td>
                                                     {isAdmin() && (
                                                         <td>
@@ -173,14 +155,13 @@ const Categories = () => {
                 </div>
             </section>
 
-            {/* Modal */}
             {showModal && (
                 <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h5 className="modal-title font-weight-bold">
-                                    {editingCategory ? 'Cập nhật Danh mục' : 'Thêm Danh mục mới'}
+                                <h5 className="modal-title">
+                                    {editingCategory ? 'Sửa Danh mục' : 'Thêm Danh mục'}
                                 </h5>
                                 <button type="button" className="close" onClick={closeModal}>
                                     <span>&times;</span>
@@ -197,26 +178,26 @@ const Categories = () => {
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                             required
-                                            placeholder="VD: Áo thun nam, Quần Jean..."
+                                            placeholder="Nhập tên danh mục..."
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Mô tả danh mục</label>
+                                        <label>Mô tả</label>
                                         <textarea
                                             className="form-control"
                                             value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                             rows="3"
-                                            placeholder="Nhập mô tả chi tiết..."
+                                            placeholder="Nhập mô tả..."
                                         />
                                     </div>
                                 </div>
                                 <div className="modal-footer">
                                     <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                                        Hủy bỏ
+                                        Hủy
                                     </button>
                                     <button type="submit" className="btn btn-primary">
-                                        {editingCategory ? 'Lưu thay đổi' : 'Tạo ngay'}
+                                        {editingCategory ? 'Cập nhật' : 'Tạo mới'}
                                     </button>
                                 </div>
                             </form>
