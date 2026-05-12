@@ -17,11 +17,6 @@ import OrdersAdmin from "./pages/OrdersAdmin";
 import OriginsAdmin from "./pages/OriginsAdmin";
 import PromotionsAdmin from "./pages/PromotionsAdmin";
 import ShippingsAdmin from "./pages/ShippingsAdmin";
-import ProductOriginsAdmin from "./pages/ProductOriginsAdmin";
-import OrderDetailsAdmin from "./pages/OrderDetailsAdmin";
-import OrderPromotionsAdmin from "./pages/OrderPromotionsAdmin";
-import CartDetailsAdmin from "./pages/CartDetailsAdmin";
-import ProductVariantsAdmin from "./pages/ProductVariantsAdmin";
 import ReviewsAdmin from "./pages/ReviewsAdmin";
 
 // Public Pages
@@ -117,16 +112,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/product-variants"
-        element={
-          <ProtectedRoute adminOnly={true}>
-            <MainLayout>
-              <ProductVariantsAdmin />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
       {/* Quản lý Danh mục */}
       <Route
         path="/categories"
@@ -189,47 +174,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/product-origins"
-        element={
-          <ProtectedRoute adminOnly={true}>
-            <MainLayout>
-              <ProductOriginsAdmin />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/order-details"
-        element={
-          <ProtectedRoute adminOnly={true}>
-            <MainLayout>
-              <OrderDetailsAdmin />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/order-promotions"
-        element={
-          <ProtectedRoute adminOnly={true}>
-            <MainLayout>
-              <OrderPromotionsAdmin />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/cart-details"
-        element={
-          <ProtectedRoute adminOnly={true}>
-            <MainLayout>
-              <CartDetailsAdmin />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-
       <Route
         path="/reviews"
         element={

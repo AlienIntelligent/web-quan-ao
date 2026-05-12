@@ -179,24 +179,6 @@ export const orderDetailApi = {
     delete: (id) => api.delete(`/order-details/${id}`),
 };
 
-// Order-Promotion API
-export const orderPromotionApi = {
-    getAll: (params) => api.get('/order-promotions', { params }),
-    getById: (id) => api.get(`/order-promotions/${id}`),
-    create: (data) => api.post('/order-promotions', data),
-    update: (id, data) => api.put(`/order-promotions/${id}`, data),
-    delete: (id) => api.delete(`/order-promotions/${id}`),
-};
-
-// Cart-Detail API
-export const cartDetailApi = {
-    getAll: (params) => api.get('/cart-details', { params }),
-    getById: (id) => api.get(`/cart-details/${id}`),
-    create: (data) => api.post('/cart-details', data),
-    update: (id, data) => api.put(`/cart-details/${id}`, data),
-    delete: (id) => api.delete(`/cart-details/${id}`),
-};
-
 const CART_KEY = 'fashi_cart';
 const CART_EVENT = 'fashi-cart-updated';
 const COUPON_KEY = 'fashi_coupon';

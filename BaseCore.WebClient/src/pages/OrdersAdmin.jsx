@@ -23,6 +23,13 @@ const STATUS_BADGE = {
     RETURNED:   'badge-dark',
 };
 
+const getCustomerName = (order) =>
+    order?.user?.name ||
+    order?.user?.userName ||
+    order?.user?.username ||
+    order?.user?.email ||
+    'Khách hàng';
+
 const OrdersAdmin = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -165,7 +172,7 @@ const OrdersAdmin = () => {
                                         <thead>
                                             <tr>
                                                 <th>Mã đơn</th>
-                                                <th>Khách hàng (ID)</th>
+                                                <th>Khách hàng</th>
                                                 <th>Ngày đặt</th>
                                                 <th>Phương thức TT</th>
                                                 <th>TT thanh toán</th>
@@ -187,7 +194,7 @@ const OrdersAdmin = () => {
                                                     <tr key={order.id}>
                                                         <td><strong>#{order.orderCode || order.id}</strong></td>
                                                         <td>
-                                                            <div>{order.user?.name || order.userId?.substring(0, 10)}</div>
+                                                            <div>{getCustomerName(order)}</div>
                                                             <small className="text-muted">{order.shippingAddress?.substring(0, 25)}...</small>
                                                         </td>
                                                         <td>{new Date(order.orderDate).toLocaleDateString('vi-VN')}</td>
@@ -271,7 +278,7 @@ const OrdersAdmin = () => {
                                 <div className="row mb-3">
                                     <div className="col-md-3">
                                         <strong>Khách hàng:</strong><br />
-                                        <span>{selectedOrder.userId}</span>
+                                        <span>{getCustomerName(selectedOrder)}</span>
                                     </div>
                                     <div className="col-md-3">
                                         <strong>Ngày đặt:</strong><br />

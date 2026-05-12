@@ -16,8 +16,7 @@ const MainLayout = ({ children }) => {
   const isActive = (path) => (location.pathname === path ? "active" : "");
 
   return (
-    <div className="wrapper">
-      {/* Navbar */}
+    <div className="wrapper admin-wrapper">
       <nav className="main-header navbar navbar-expand navbar-white navbar-light">
         <ul className="navbar-nav">
           <li className="nav-item">
@@ -58,7 +57,6 @@ const MainLayout = ({ children }) => {
         </ul>
       </nav>
 
-      {/* Sidebar */}
       <aside className="main-sidebar sidebar-dark-primary elevation-4">
         <Link to="/" className="brand-link">
           <span className="brand-text font-weight-light ml-3">
@@ -67,13 +65,14 @@ const MainLayout = ({ children }) => {
         </Link>
 
         <div className="sidebar">
-          {/* User Panel in Sidebar (Added to match reference style) */}
           <div className="user-panel mt-3 pb-3 mb-3 d-flex">
             <div className="image">
               <i className="fas fa-user-circle fa-2x text-light"></i>
             </div>
             <div className="info">
-              <Link to="#" className="d-block">{user?.name || user?.username}</Link>
+              <Link to="#" className="d-block">
+                {user?.name || user?.username}
+              </Link>
             </div>
           </div>
 
@@ -168,17 +167,6 @@ const MainLayout = ({ children }) => {
               {isAdmin() && (
                 <li className="nav-item">
                   <Link
-                    to="/cart-details"
-                    className={`nav-link ${isActive("/cart-details")}`}
-                  >
-                    <i className="nav-icon fas fa-shopping-cart"></i>
-                    <p>Giỏ hàng</p>
-                  </Link>
-                </li>
-              )}
-              {isAdmin() && (
-                <li className="nav-item">
-                  <Link
                     to="/users"
                     className={`nav-link ${isActive("/users")}`}
                   >
@@ -192,10 +180,8 @@ const MainLayout = ({ children }) => {
         </div>
       </aside>
 
-      {/* Content */}
       {children}
 
-      {/* Footer */}
       <footer className="main-footer">
         <strong>
           Copyright &copy; 2024 <a href="#">BaseCore Sales</a>.

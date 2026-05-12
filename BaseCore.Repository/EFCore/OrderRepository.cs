@@ -68,13 +68,18 @@ namespace BaseCore.Repository.EFCore
             int page,
             int pageSize)
         {
-            var query = _dbSet.AsQueryable();
+            var query = _dbSet
+                .Include(o => o.User)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 var lowerKeyword = keyword.ToLower();
                 query = query.Where(o =>
                     o.UserId.ToLower().Contains(lowerKeyword) ||
+                    o.User.Name.ToLower().Contains(lowerKeyword) ||
+                    o.User.UserName.ToLower().Contains(lowerKeyword) ||
+                    o.User.Email.ToLower().Contains(lowerKeyword) ||
                     o.Id.ToString().Contains(lowerKeyword) ||
                     o.OrderCode.ToLower().Contains(lowerKeyword));
             }
@@ -92,7 +97,6 @@ namespace BaseCore.Repository.EFCore
 
             var totalCount = await query.CountAsync();
             var orders = await query
-                .Include(o => o.User)
                 .OrderByDescending(o => o.OrderDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

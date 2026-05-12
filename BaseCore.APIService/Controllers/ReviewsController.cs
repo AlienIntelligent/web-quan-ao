@@ -56,7 +56,7 @@ public class ReviewsController : ControllerBase
                 Id = r.Id,
                 ProductId = r.ProductId,
                 UserId = r.UserId,
-                UserName = user?.Name ?? user?.UserName ?? r.UserId,
+                UserName = user?.Name ?? user?.UserName ?? "Khách hàng",
                 Rating = r.Rating,
                 Comment = r.Comment,
                 CreatedAt = r.CreatedAt
@@ -87,7 +87,7 @@ public class ReviewsController : ControllerBase
             Id = review.Id,
             ProductId = review.ProductId,
             UserId = review.UserId,
-            UserName = user?.Name ?? user?.UserName ?? review.UserId,
+            UserName = user?.Name ?? user?.UserName ?? "Khách hàng",
             Rating = review.Rating,
             Comment = review.Comment,
             CreatedAt = review.CreatedAt
