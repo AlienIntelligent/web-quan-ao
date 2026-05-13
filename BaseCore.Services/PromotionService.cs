@@ -100,7 +100,14 @@ namespace BaseCore.Services
             await _promotionRepository.DeleteByIdAsync(id);
         }
 
-        public async Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(string? keyword, bool? isActive, int page, int pageSize)
+        public async Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(
+            string? keyword,
+            bool? isActive,
+            string? discountType,
+            decimal? discountValue,
+            decimal? minimumOrderAmount,
+            int page,
+            int pageSize)
         {
             if (page < 1)
                 throw new ArgumentException("Page number must be greater than 0", nameof(page));
@@ -108,7 +115,14 @@ namespace BaseCore.Services
             if (pageSize < 1 || pageSize > 100)
                 throw new ArgumentException("Page size must be between 1 and 100", nameof(pageSize));
 
-            var result = await _promotionRepository.SearchAsync(keyword, isActive, page, pageSize);
+            var result = await _promotionRepository.SearchAsync(
+                keyword,
+                isActive,
+                discountType,
+                discountValue,
+                minimumOrderAmount,
+                page,
+                pageSize);
             return result;
         }
 

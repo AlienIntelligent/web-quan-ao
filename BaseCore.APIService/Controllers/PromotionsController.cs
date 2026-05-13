@@ -25,12 +25,18 @@ namespace BaseCore.APIService.Controllers
         public async Task<IActionResult> GetAll(
             [FromQuery] string keyword = "",
             [FromQuery] bool? isActive = null,
+            [FromQuery] string? discountType = null,
+            [FromQuery] decimal? discountValue = null,
+            [FromQuery] decimal? minimumOrderAmount = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
             var (promotions, totalCount) = await _promotionService.SearchAsync(
                 string.IsNullOrWhiteSpace(keyword) ? null : keyword,
                 isActive,
+                string.IsNullOrWhiteSpace(discountType) ? null : discountType,
+                discountValue,
+                minimumOrderAmount,
                 page,
                 pageSize);
 

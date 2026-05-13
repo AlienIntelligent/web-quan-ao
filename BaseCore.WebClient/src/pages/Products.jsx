@@ -152,6 +152,11 @@ const Products = () => {
         setError('');
 
         try {
+            if (Number(formData.stock) < 0) {
+                setError('Số lượng kho không được âm');
+                return;
+            }
+
             const data = {
                 ...formData,
                 price: parseFloat(formData.price),
@@ -225,6 +230,27 @@ const Products = () => {
         loadRelatedData(editingProduct.id);
     };
 
+    const getOriginName = (product) =>
+        product.originName ||
+        product.productOrigin?.originName ||
+        product.productOrigin?.origin?.name ||
+        '-';
+
+    const renderStock = (product) => {
+        const variantCount = Number(product.variantCount || 0);
+        const totalStock = Number(product.totalStock ?? product.stock ?? 0);
+        if (variantCount > 0) {
+            return (
+                <>
+                    <strong>{totalStock}</strong>
+                    <small className="text-muted d-block">{variantCount} biến thể</small>
+                </>
+            );
+        }
+
+        return totalStock;
+    };
+
     const renderPagination = () => {
         const pages = [];
         for (let i = 1; i <= totalPages; i++) {
@@ -273,6 +299,22 @@ const Products = () => {
                                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
+                                        <input
+                                            type="number"
+                                            className="form-control mr-2"
+                                            placeholder="Giá bán từ..."
+                                            value={minPrice}
+                                            onChange={(e) => setMinPrice(e.target.value)}
+                                            min="0"
+                                        />
+                                        <input
+                                            type="number"
+                                            className="form-control mr-2"
+                                            placeholder="Giá bán đến..."
+                                            value={maxPrice}
+                                            onChange={(e) => setMaxPrice(e.target.value)}
+                                            min="0"
+                                        />
                                         <button type="submit" className="btn btn-primary">
                                             <i className="fas fa-search"></i> Tìm
                                         </button>
@@ -302,6 +344,7 @@ const Products = () => {
                                                 <th style={{ width: '60px' }}>Hình</th>
                                                 <th>Tên sản phẩm</th>
                                                 <th>Danh mục</th>
+                                                <th>Xuất xứ</th>
                                                 <th>Giá gốc</th>
                                                 <th>Giá bán</th>
                                                 <th>Kho</th>
@@ -311,7 +354,7 @@ const Products = () => {
                                         <tbody>
                                             {products.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={isAdmin() ? 8 : 7} className="text-center py-4">
+                                                    <td colSpan={isAdmin() ? 9 : 8} className="text-center py-4">
                                                         Chưa có sản phẩm nào
                                                     </td>
                                                 </tr>
@@ -329,6 +372,7 @@ const Products = () => {
                                                         </td>
                                                         <td><strong>{product.name}</strong></td>
                                                         <td>{product.category?.name}</td>
+                                                        <td>{getOriginName(product)}</td>
                                                         <td>
                                                             <span className="text-muted" style={{ textDecoration: 'line-through' }}>
                                                                 {product.originalPrice?.toLocaleString()} đ
@@ -337,7 +381,7 @@ const Products = () => {
                                                         <td>
                                                             <strong className="text-danger">{product.price?.toLocaleString()} đ</strong>
                                                         </td>
-                                                        <td>{product.stock}</td>
+                                                        <td>{renderStock(product)}</td>
                                                         {isAdmin() && (
                                                             <td>
                                                                 <button
@@ -494,8 +538,14 @@ const Products = () => {
                                                         className="form-control"
                                                         value={formData.stock}
                                                         onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                                                        min="0"
                                                         required
                                                     />
+                                                    {editingProduct && variants.length > 0 && (
+                                                        <small className="text-muted">
+                                                            Bảng sản phẩm hiển thị tổng kho của các biến thể.
+                                                        </small>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

@@ -188,7 +188,7 @@ namespace BaseCore.Services
             // Cập nhật PaymentStatus khi giao thành công
             if (status.Equals("DELIVERED", StringComparison.OrdinalIgnoreCase))
             {
-                order.PaymentStatus = "Paid";
+                order.PaymentStatus = "PAID";
                 _context.Entry(order).Property(x => x.PaymentStatus).IsModified = true;
             }
 

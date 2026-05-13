@@ -12,7 +12,14 @@ namespace BaseCore.Repository.EFCore
         Task<List<Promotion>> GetActivePromotionsAsync();
         Task<List<Promotion>> GetPromotionsByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<Promotion?> GetWithProductsAsync(int promotionId);
-        Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(string? keyword, bool? isActive, int page, int pageSize);
+        Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(
+            string? keyword,
+            bool? isActive,
+            string? discountType,
+            decimal? discountValue,
+            decimal? minimumOrderAmount,
+            int page,
+            int pageSize);
     }
 
     public class PromotionRepository : Repository<Promotion>, IPromotionRepository
@@ -52,7 +59,14 @@ namespace BaseCore.Repository.EFCore
                 .FirstOrDefaultAsync(p => p.Id == promotionId);
         }
 
-        public async Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(string? keyword, bool? isActive, int page, int pageSize)
+        public async Task<(List<Promotion> Promotions, int TotalCount)> SearchAsync(
+            string? keyword,
+            bool? isActive,
+            string? discountType,
+            decimal? discountValue,
+            decimal? minimumOrderAmount,
+            int page,
+            int pageSize)
         {
             var query = _dbSet.AsQueryable();
 
@@ -68,6 +82,21 @@ namespace BaseCore.Repository.EFCore
             if (isActive.HasValue)
             {
                 query = query.Where(p => p.IsActive == isActive.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(p => p.DiscountType == discountType);
+            }
+
+            if (discountValue.HasValue)
+            {
+                query = query.Where(p => p.DiscountValue == discountValue.Value);
+            }
+
+            if (minimumOrderAmount.HasValue)
+            {
+                query = query.Where(p => p.MinimumOrderAmount == minimumOrderAmount.Value);
             }
 
             var totalCount = await query.CountAsync();

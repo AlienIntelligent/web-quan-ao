@@ -67,7 +67,12 @@ namespace BaseCore.APIService.Controllers
                         Id = p.Category.Id,
                         Name = p.Category.Name,
                         Description = p.Category.Description
-                    }
+                    },
+                OriginName = p.ProductOrigin?.Origin?.Name,
+                VariantCount = p.ProductVariants?.Count ?? 0,
+                TotalStock = p.ProductVariants != null && p.ProductVariants.Any()
+                    ? p.ProductVariants.Sum(v => v.Stock)
+                    : p.Stock
             }).ToList();
 
             return Ok(new
@@ -107,7 +112,12 @@ namespace BaseCore.APIService.Controllers
                         Id = product.Category.Id,
                         Name = product.Category.Name,
                         Description = product.Category.Description
-                    }
+                    },
+                OriginName = product.ProductOrigin?.Origin?.Name,
+                VariantCount = product.ProductVariants?.Count ?? 0,
+                TotalStock = product.ProductVariants != null && product.ProductVariants.Any()
+                    ? product.ProductVariants.Sum(v => v.Stock)
+                    : product.Stock
             };
 
             return Ok(dto);
@@ -124,6 +134,10 @@ namespace BaseCore.APIService.Controllers
             var category = await _categoryRepository.GetByIdAsync(dto.CategoryId);
             if (category == null)
                 return BadRequest(new { message = "Category not found" });
+            if (dto.Stock < 0)
+                return BadRequest(new { message = "Stock cannot be negative" });
+            if (dto.Price < 0 || (dto.OriginalPrice.HasValue && dto.OriginalPrice.Value < 0))
+                return BadRequest(new { message = "Price cannot be negative" });
 
             var product = new Product
             {
@@ -150,6 +164,11 @@ namespace BaseCore.APIService.Controllers
             var product = await _productRepository.GetByIdAsync(id);
             if (product == null)
                 return NotFound(new { message = "Product not found" });
+            if (dto.Stock.HasValue && dto.Stock.Value < 0)
+                return BadRequest(new { message = "Stock cannot be negative" });
+            if ((dto.Price.HasValue && dto.Price.Value < 0) ||
+                (dto.OriginalPrice.HasValue && dto.OriginalPrice.Value < 0))
+                return BadRequest(new { message = "Price cannot be negative" });
 
             product.Name = dto.Name ?? product.Name;
             product.Price = dto.Price ?? product.Price;
@@ -224,6 +243,9 @@ namespace BaseCore.APIService.Controllers
         public string Description { get; set; } = "";
         public int CategoryId { get; set; }
         public CategoryBriefDto? Category { get; set; }
+        public string? OriginName { get; set; }
+        public int VariantCount { get; set; }
+        public int TotalStock { get; set; }
     }
 
     public class CategoryBriefDto

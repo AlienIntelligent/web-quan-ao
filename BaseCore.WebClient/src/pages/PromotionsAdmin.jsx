@@ -7,6 +7,9 @@ const PromotionsAdmin = () => {
     const [loading, setLoading] = useState(false);
     const [keyword, setKeyword] = useState('');
     const [filterActive, setFilterActive] = useState('');
+    const [filterDiscountType, setFilterDiscountType] = useState('');
+    const [discountValueKeyword, setDiscountValueKeyword] = useState('');
+    const [minimumOrderAmountKeyword, setMinimumOrderAmountKeyword] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
@@ -26,6 +29,9 @@ const PromotionsAdmin = () => {
         try {
             const params = { keyword: keyword || undefined, page: nextPage, pageSize };
             if (filterActive !== '') params.isActive = filterActive === 'true';
+            if (filterDiscountType !== '') params.discountType = filterDiscountType;
+            if (discountValueKeyword !== '') params.discountValue = discountValueKeyword;
+            if (minimumOrderAmountKeyword !== '') params.minimumOrderAmount = minimumOrderAmountKeyword;
             const res = await promotionApi.getAll(params);
             setItems(res.data.items || []);
             setTotalPages(res.data.totalPages || 1);
@@ -131,7 +137,7 @@ const PromotionsAdmin = () => {
                     <div className="card">
                         <div className="card-header">
                             <div className="row">
-                                <div className="col-md-8">
+                                <div className="col-md-10">
                                     <form onSubmit={handleSearch} className="form-inline">
                                         <input
                                             type="text"
@@ -149,12 +155,38 @@ const PromotionsAdmin = () => {
                                             <option value="true">Đang kích hoạt</option>
                                             <option value="false">Tạm dừng</option>
                                         </select>
+                                        <select
+                                            className="form-control mr-2"
+                                            value={filterDiscountType}
+                                            onChange={(e) => setFilterDiscountType(e.target.value)}
+                                        >
+                                            <option value="">Tất cả loại giảm</option>
+                                            <option value="PERCENT">Phần trăm</option>
+                                            <option value="AMOUNT">Số tiền</option>
+                                            <option value="FREESHIP">Miễn phí vận chuyển</option>
+                                        </select>
+                                        <input
+                                            type="number"
+                                            className="form-control mr-2"
+                                            placeholder="Tìm mức giảm..."
+                                            value={discountValueKeyword}
+                                            onChange={(e) => setDiscountValueKeyword(e.target.value)}
+                                            min="0"
+                                        />
+                                        <input
+                                            type="number"
+                                            className="form-control mr-2"
+                                            placeholder="Tìm đơn tối thiểu..."
+                                            value={minimumOrderAmountKeyword}
+                                            onChange={(e) => setMinimumOrderAmountKeyword(e.target.value)}
+                                            min="0"
+                                        />
                                         <button type="submit" className="btn btn-primary">
                                             <i className="fas fa-search"></i> Tìm
                                         </button>
                                     </form>
                                 </div>
-                                <div className="col-md-4 text-right">
+                                <div className="col-md-2 text-right">
                                     {isAdmin() && (
                                         <button className="btn btn-success" onClick={() => openModal()}>
                                             <i className="fas fa-plus"></i> Thêm Khuyến mãi

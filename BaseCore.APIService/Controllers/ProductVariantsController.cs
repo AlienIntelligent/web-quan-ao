@@ -76,6 +76,10 @@ public class ProductVariantsController : ControllerBase
         if (dto == null) return BadRequest(new { message = "Invalid request" });
         if (string.IsNullOrWhiteSpace(dto.Size))
             return BadRequest(new { message = "Size is required" });
+        if (dto.Stock < 0)
+            return BadRequest(new { message = "Stock cannot be negative" });
+        if (dto.Price < 0)
+            return BadRequest(new { message = "Price cannot be negative" });
 
         var product = await _productRepository.GetByIdAsync(dto.ProductId);
         if (product == null) return BadRequest(new { message = "Product not found" });
@@ -101,6 +105,10 @@ public class ProductVariantsController : ControllerBase
 
         var existing = await _variantRepository.GetByIdAsync(id);
         if (existing == null) return NotFound(new { message = "Product variant not found" });
+        if (dto.Stock.HasValue && dto.Stock.Value < 0)
+            return BadRequest(new { message = "Stock cannot be negative" });
+        if (dto.Price.HasValue && dto.Price.Value < 0)
+            return BadRequest(new { message = "Price cannot be negative" });
 
         if (dto.ProductId.HasValue)
         {

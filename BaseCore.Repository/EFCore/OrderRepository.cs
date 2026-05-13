@@ -18,6 +18,7 @@ namespace BaseCore.Repository.EFCore
             string? keyword,
             string? status,
             DateTime? fromDate,
+            decimal? finalAmount,
             int page,
             int pageSize);
     }
@@ -65,6 +66,7 @@ namespace BaseCore.Repository.EFCore
             string? keyword,
             string? status,
             DateTime? fromDate,
+            decimal? finalAmount,
             int page,
             int pageSize)
         {
@@ -93,6 +95,11 @@ namespace BaseCore.Repository.EFCore
             {
                 var start = fromDate.Value.Date;
                 query = query.Where(o => o.OrderDate >= start);
+            }
+
+            if (finalAmount.HasValue)
+            {
+                query = query.Where(o => o.FinalAmount == finalAmount.Value);
             }
 
             var totalCount = await query.CountAsync();

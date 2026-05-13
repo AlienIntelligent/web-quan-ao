@@ -25,12 +25,14 @@ namespace BaseCore.APIService.Controllers
         public async Task<IActionResult> GetAll(
             [FromQuery] string? status = null,
             [FromQuery] string? carrierName = null,
+            [FromQuery] string? keyword = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
             var (shippings, totalCount) = await _shippingService.SearchAsync(
                 string.IsNullOrWhiteSpace(status) ? null : status,
                 string.IsNullOrWhiteSpace(carrierName) ? null : carrierName,
+                string.IsNullOrWhiteSpace(keyword) ? null : keyword,
                 page,
                 pageSize);
 
@@ -129,6 +131,21 @@ namespace BaseCore.APIService.Controllers
             {
                 await _shippingService.DeleteShippingAsync(id);
                 return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/confirm")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ConfirmShipment([FromRoute] int id)
+        {
+            try
+            {
+                var shipping = await _shippingService.ConfirmShipmentAsync(id);
+                return Ok(new { message = "Xác nhận chuyển đơn thành công. Đơn hàng đã được cập nhật sang trạng thái 'Đã chuyển'.", shipping = ToDto(shipping) });
             }
             catch (Exception ex)
             {

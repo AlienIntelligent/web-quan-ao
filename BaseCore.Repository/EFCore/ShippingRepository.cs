@@ -13,7 +13,7 @@ namespace BaseCore.Repository.EFCore
         Task<List<Shipping>> GetByCarrierAsync(string carrierName);
         Task<List<Shipping>> GetShippingByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<Shipping?> GetByTrackingCodeAsync(string trackingCode);
-        Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, int page, int pageSize);
+        Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, string? keyword, int page, int pageSize);
     }
 
     public class ShippingRepository : Repository<Shipping>, IShippingRepository
@@ -63,7 +63,7 @@ namespace BaseCore.Repository.EFCore
                 .FirstOrDefaultAsync(s => s.TrackingCode == trackingCode);
         }
 
-        public async Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, int page, int pageSize)
+        public async Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, string? keyword, int page, int pageSize)
         {
             var query = _dbSet.Include(s => s.Order).AsQueryable();
 
@@ -75,6 +75,15 @@ namespace BaseCore.Repository.EFCore
             if (!string.IsNullOrEmpty(carrierName))
             {
                 query = query.Where(s => s.CarrierName != null && s.CarrierName.ToLower().Contains(carrierName.ToLower()));
+            }
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var lowerKeyword = keyword.ToLower();
+                query = query.Where(s =>
+                    (s.TrackingCode != null && s.TrackingCode.ToLower().Contains(lowerKeyword)) ||
+                    s.ReceiverName.ToLower().Contains(lowerKeyword) ||
+                    s.ShippingAddress.ToLower().Contains(lowerKeyword));
             }
 
             var totalCount = await query.CountAsync();

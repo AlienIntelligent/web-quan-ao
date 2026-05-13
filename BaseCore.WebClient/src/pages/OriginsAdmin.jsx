@@ -6,23 +6,20 @@ const OriginsAdmin = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [keyword, setKeyword] = useState('');
-    const [filterActive, setFilterActive] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [formData, setFormData] = useState({ name: '', description: '', isActive: true });
+    const [formData, setFormData] = useState({ name: '', description: '' });
     const [error, setError] = useState('');
     const { isAdmin } = useAuth();
 
     const loadItems = async (nextPage = page) => {
         setLoading(true);
         try {
-            const params = { keyword: keyword || undefined, page: nextPage, pageSize };
-            if (filterActive !== '') params.isActive = filterActive === 'true';
-            const res = await originApi.getAll(params);
+            const res = await originApi.getAll({ keyword: keyword || undefined, page: nextPage, pageSize });
             setItems(res.data.items || []);
             setTotalPages(res.data.totalPages || 1);
             setTotalCount(res.data.totalCount || 0);
@@ -42,10 +39,10 @@ const OriginsAdmin = () => {
     const openModal = (origin = null) => {
         if (origin) {
             setEditing(origin);
-            setFormData({ name: origin.name || '', description: origin.description || '', isActive: !!origin.isActive });
+            setFormData({ name: origin.name || '', description: origin.description || '' });
         } else {
             setEditing(null);
-            setFormData({ name: '', description: '', isActive: true });
+            setFormData({ name: '', description: '' });
         }
         setError('');
         setShowModal(true);
@@ -57,8 +54,9 @@ const OriginsAdmin = () => {
         e.preventDefault();
         setError('');
         try {
-            if (editing) await originApi.update(editing.id, formData);
-            else await originApi.create(formData);
+            const payload = { ...formData, isActive: true };
+            if (editing) await originApi.update(editing.id, payload);
+            else await originApi.create(payload);
             closeModal();
             await loadItems(1);
             setPage(1);
@@ -115,15 +113,6 @@ const OriginsAdmin = () => {
                                             value={keyword}
                                             onChange={(e) => setKeyword(e.target.value)}
                                         />
-                                        <select
-                                            className="form-control mr-2"
-                                            value={filterActive}
-                                            onChange={(e) => setFilterActive(e.target.value)}
-                                        >
-                                            <option value="">Tất cả</option>
-                                            <option value="true">Đang hoạt động</option>
-                                            <option value="false">Tạm khóa</option>
-                                        </select>
                                         <button type="submit" className="btn btn-primary">
                                             <i className="fas fa-search"></i> Tìm
                                         </button>
@@ -151,7 +140,6 @@ const OriginsAdmin = () => {
                                                 <th style={{ width: '80px' }}>ID</th>
                                                 <th>Tên xuất xứ</th>
                                                 <th>Mô tả</th>
-                                                <th style={{ width: '120px' }}>Trạng thái</th>
                                                 <th>Ngày tạo</th>
                                                 {isAdmin() && <th style={{ width: '120px' }}>Thao tác</th>}
                                             </tr>
@@ -159,7 +147,7 @@ const OriginsAdmin = () => {
                                         <tbody>
                                             {items.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={isAdmin() ? 6 : 5} className="text-center py-4">
+                                                    <td colSpan={isAdmin() ? 5 : 4} className="text-center py-4">
                                                         Không tìm thấy dữ liệu nào
                                                     </td>
                                                 </tr>
@@ -169,11 +157,6 @@ const OriginsAdmin = () => {
                                                         <td>{o.id}</td>
                                                         <td><strong>{o.name}</strong></td>
                                                         <td>{o.description}</td>
-                                                        <td>
-                                                            <span className={`badge ${o.isActive ? 'badge-success' : 'badge-secondary'}`}>
-                                                                {o.isActive ? 'Hoạt động' : 'Tạm khóa'}
-                                                            </span>
-                                                        </td>
                                                         <td>{o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
                                                         {isAdmin() && (
                                                             <td>
@@ -234,14 +217,6 @@ const OriginsAdmin = () => {
                                         <textarea className="form-control" value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                             rows="3" placeholder="Nhập mô tả..." />
-                                    </div>
-                                    <div className="form-group">
-                                        <div className="custom-control custom-switch">
-                                            <input type="checkbox" className="custom-control-input" id="originIsActive"
-                                                checked={formData.isActive}
-                                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
-                                            <label className="custom-control-label" htmlFor="originIsActive">Kích hoạt</label>
-                                        </div>
                                     </div>
                                 </div>
                                 <div className="modal-footer">

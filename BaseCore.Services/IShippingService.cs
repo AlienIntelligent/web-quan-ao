@@ -16,7 +16,8 @@ namespace BaseCore.Services
         Task<Shipping> CreateShippingAsync(Shipping shipping);
         Task UpdateShippingAsync(Shipping shipping);
         Task DeleteShippingAsync(int id);
-        Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, int page, int pageSize);
+        Task<(List<Shipping> Shippings, int TotalCount)> SearchAsync(string? status, string? carrierName, string? keyword, int page, int pageSize);
         Task UpdateShippingStatusAsync(int shippingId, string newStatus);
+        Task<Shipping> ConfirmShipmentAsync(int shippingId);
     }
 }

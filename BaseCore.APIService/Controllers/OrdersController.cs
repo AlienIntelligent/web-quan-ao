@@ -17,15 +17,19 @@ namespace BaseCore.APIService.Controllers
     [Authorize]
     public class OrdersController : ControllerBase
     {
-        private static readonly HashSet<string> AllowedStatuses = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> OrderManagedStatuses = new(StringComparer.OrdinalIgnoreCase)
         {
             "PENDING",
             "CONFIRMED",
             "PROCESSING",
+            "CANCELLED"
+        };
+
+        private static readonly HashSet<string> ShippingManagedStatuses = new(StringComparer.OrdinalIgnoreCase)
+        {
             "SHIPPED",
             "DELIVERING",
             "DELIVERED",
-            "CANCELLED",
             "RETURNED"
         };
 
@@ -116,6 +120,7 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] string? keyword,
             [FromQuery] string? status,
             [FromQuery] DateTime? fromDate,
+            [FromQuery] decimal? finalAmount,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
@@ -123,6 +128,7 @@ namespace BaseCore.APIService.Controllers
                 keyword,
                 status,
                 fromDate,
+                finalAmount,
                 page,
                 pageSize);
 
@@ -198,7 +204,10 @@ namespace BaseCore.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
-            if (!AllowedStatuses.Contains(dto.Status))
+            if (ShippingManagedStatuses.Contains(dto.Status))
+                return BadRequest(new { message = "Trạng thái giao hàng được cập nhật ở bảng vận chuyển" });
+
+            if (!OrderManagedStatuses.Contains(dto.Status))
                 return BadRequest(new { message = "Trạng thái đơn hàng không hợp lệ" });
 
             try

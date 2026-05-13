@@ -16,7 +16,13 @@ namespace BaseCore.Services.Authen
         Task<User> Create(User user, string password, bool isActive = true);
         Task Update(User user, string password = null);
         Task Delete(string id);
-        Task<(List<User> Users, int TotalCount)> Search(string keyword, int page, int pageSize);
+        Task<(List<User> Users, int TotalCount)> Search(
+            string keyword,
+            string? phone,
+            int? userType,
+            bool? isActive,
+            int page,
+            int pageSize);
     }
 
     public class UserService : IUserService
@@ -140,9 +146,15 @@ namespace BaseCore.Services.Authen
             await _userRepository.DeleteByIdAsync(id);
         }
 
-        public async Task<(List<User> Users, int TotalCount)> Search(string keyword, int page, int pageSize)
+        public async Task<(List<User> Users, int TotalCount)> Search(
+            string keyword,
+            string? phone,
+            int? userType,
+            bool? isActive,
+            int page,
+            int pageSize)
         {
-            return await _userRepository.SearchAsync(keyword, page, pageSize);
+            return await _userRepository.SearchAsync(keyword, phone, userType, isActive, page, pageSize);
         }
     }
 }
