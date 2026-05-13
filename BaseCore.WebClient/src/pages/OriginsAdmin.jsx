@@ -174,7 +174,7 @@ const OriginsAdmin = () => {
                                         </tbody>
                                     </table>
 
-                                    <div className="d-flex justify-content-between align-items-center">
+                                    <div className="d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
                                         <span>Tổng: {totalCount} bản ghi</span>
                                         <nav>
                                             <ul className="pagination mb-0">

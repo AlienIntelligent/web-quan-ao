@@ -337,7 +337,7 @@ const Products = () => {
                                 </div>
                             ) : (
                                 <>
-                                    <table className="table table-hover table-valign-middle mb-0">
+                                    <table className="table table-bordered table-striped table-hover table-valign-middle mb-0">
                                         <thead>
                                             <tr>
                                                 <th style={{ width: '60px' }}>ID</th>
@@ -345,16 +345,15 @@ const Products = () => {
                                                 <th>Tên sản phẩm</th>
                                                 <th>Danh mục</th>
                                                 <th>Xuất xứ</th>
-                                                <th>Giá gốc</th>
                                                 <th>Giá bán</th>
                                                 <th>Kho</th>
-                                                {isAdmin() && <th style={{ width: '140px' }}>Thao tác</th>}
+                                                {isAdmin() && <th style={{ width: '120px' }}>Thao tác</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {products.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={isAdmin() ? 9 : 8} className="text-center py-4">
+                                                    <td colSpan={isAdmin() ? 8 : 7} className="text-center py-4">
                                                         Chưa có sản phẩm nào
                                                     </td>
                                                 </tr>
@@ -374,11 +373,6 @@ const Products = () => {
                                                         <td>{product.category?.name}</td>
                                                         <td>{getOriginName(product)}</td>
                                                         <td>
-                                                            <span className="text-muted" style={{ textDecoration: 'line-through' }}>
-                                                                {product.originalPrice?.toLocaleString()} đ
-                                                            </span>
-                                                        </td>
-                                                        <td>
                                                             <strong className="text-danger">{product.price?.toLocaleString()} đ</strong>
                                                         </td>
                                                         <td>{renderStock(product)}</td>
@@ -387,9 +381,9 @@ const Products = () => {
                                                                 <button
                                                                     className="btn btn-sm btn-info mr-1"
                                                                     onClick={() => openModal(product)}
-                                                                    title="Quản lý"
+                                                                    title="Sửa"
                                                                 >
-                                                                    <i className="fas fa-cog"></i>
+                                                                    <i className="fas fa-edit"></i>
                                                                 </button>
                                                                 <button
                                                                     className="btn btn-sm btn-danger"
@@ -406,8 +400,8 @@ const Products = () => {
                                         </tbody>
                                     </table>
 
-                                    <div className="d-flex justify-content-between align-items-center mt-3">
-                                        <span>Tổng: <strong>{totalCount}</strong> sản phẩm</span>
+                                    <div className="d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
+                                        <span>Tổng: {totalCount} bản ghi</span>
                                         <nav>
                                             <ul className="pagination mb-0">
                                                 <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>

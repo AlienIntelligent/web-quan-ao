@@ -359,7 +359,6 @@ const ShippingsAdmin = () => {
                               </td>
                               <td>{getMethodLabel(shipping.shippingMethod)}</td>
                               <td>{shipping.carrierName || "-"}</td>
-                              <td>{shipping.trackingCode || "-"}</td>
                               <td>{formatMoney(shipping.shippingFee)}</td>
                               <td>
                                 {formatDate(shipping.estimatedDeliveryDate)}
