@@ -146,7 +146,7 @@ namespace BaseCore.Services
             if (promotion.UsageLimit.HasValue && promotion.UsedCount >= promotion.UsageLimit.Value)
                 throw new InvalidOperationException("Mã giảm giá đã hết lượt sử dụng.");
 
-            if (orderSubtotal < promotion.MinimumOrderAmount)
+            if (promotion.MinimumOrderAmount > 0 && orderSubtotal < promotion.MinimumOrderAmount)
                 throw new InvalidOperationException($"Đơn hàng tối thiểu {promotion.MinimumOrderAmount:N0} để dùng mã này.");
 
             var discountAmount = CalculateDiscountAmount(promotion, orderSubtotal, shippingFee);
@@ -163,16 +163,26 @@ namespace BaseCore.Services
 
         private static decimal CalculateDiscountAmount(Promotion promotion, decimal orderSubtotal, decimal shippingFee)
         {
-            var discountType = (promotion.DiscountType ?? "").Trim().ToUpperInvariant();
+            var discountTypeRaw = (promotion.DiscountType ?? "").Trim().ToUpperInvariant();
+
+            // Chuẩn hóa các giá trị đầu vào: hỗ trợ "1", "2", "PERCENTAGE", "PERCENT", "%", "AMOUNT", "VOUCHER", "FREESHIP"
+            string discountType = discountTypeRaw switch
+            {
+                "1" or "PERCENT" or "PERCENTAGE" or "%" => "PERCENT",
+                "2" or "AMOUNT" or "VOUCHER" => "AMOUNT",
+                "FREESHIP" => "FREESHIP",
+                _ => discountTypeRaw // giữ nguyên nếu không match
+            };
+
             decimal discountAmount = discountType switch
             {
                 "PERCENT" => orderSubtotal * promotion.DiscountValue / 100,
                 "AMOUNT" => promotion.DiscountValue,
                 "FREESHIP" => shippingFee,
-                _ => throw new InvalidOperationException("Loại mã giảm giá không hợp lệ.")
+                _ => throw new InvalidOperationException("Loại mã giảm giá không hợp lệ. Chỉ hỗ trợ %, voucher, freeship.")
             };
 
-            if (promotion.MaximumDiscountAmount.HasValue)
+            if (promotion.MaximumDiscountAmount.HasValue && discountType != "FREESHIP")
             {
                 discountAmount = Math.Min(discountAmount, promotion.MaximumDiscountAmount.Value);
             }

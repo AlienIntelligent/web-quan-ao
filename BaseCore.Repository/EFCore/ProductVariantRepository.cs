@@ -20,6 +20,8 @@ namespace BaseCore.Repository.EFCore
         {
             return await _dbSet
                 .Where(v => v.ProductId == productId)
+                .Include(v => v.SizeNavigation)   // L?y tên size t? b?ng Sizes
+                .Include(v => v.ColorNavigation)  // L?y tên màu t? b?ng Colors
                 .OrderBy(v => v.Id)
                 .ToListAsync();
         }

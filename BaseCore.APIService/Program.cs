@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
 // SQL Server Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? builder.Configuration.GetConnectionString("ConnectedDb")
-    ?? "Data Source=neyuhtlap\\sqlexpress;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+    ?? "Data Source=XD\\SQLSERVER2022;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -122,6 +122,7 @@ builder.Services.AddAuthentication(x =>
 
 var app = builder.Build();
 
+
 // Ensure Database is created
 using (var scope = app.Services.CreateScope())
 {
@@ -161,7 +162,8 @@ using (var scope = app.Services.CreateScope())
 
     db.Database.Migrate();
 }
-
+// Serve static files (required for uploaded images)
+app.UseStaticFiles();
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

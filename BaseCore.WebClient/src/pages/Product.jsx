@@ -53,7 +53,7 @@ const Product = () => {
         ]);
 
         const p = pRes?.data;
-        const vs = Array.isArray(vRes?.data) ? vRes.data : [];
+          const vs = (vRes?.data?.items && Array.isArray(vRes.data.items)) ? vRes.data.items : [];
 
         setProduct(p ?? null);
         setVariants(vs);
