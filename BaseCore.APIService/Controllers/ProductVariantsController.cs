@@ -1,11 +1,12 @@
+using BaseCore.Entities;
+using BaseCore.Repository;
+using BaseCore.Repository.EFCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
+using System.Linq;
 using System.Threading.Tasks;
-using BaseCore.Entities;
-using BaseCore.Repository.EFCore;
 
 namespace BaseCore.APIService.Controllers;
 
@@ -13,14 +14,14 @@ namespace BaseCore.APIService.Controllers;
 [ApiController]
 public class ProductVariantsController : ControllerBase
 {
-    private readonly IProductVariantRepository _variantRepository;
+    private readonly AppDbContext _context;
     private readonly IProductRepository _productRepository;
 
     public ProductVariantsController(
-        IProductVariantRepository variantRepository,
+        AppDbContext context,
         IProductRepository productRepository)
     {
-        _variantRepository = variantRepository;
+        _context = context;
         _productRepository = productRepository;
     }
 
@@ -31,26 +32,29 @@ public class ProductVariantsController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] int? productId = null)
     {
-        Expression<Func<ProductVariant, bool>>? filter = null;
-        
-        // Priority to explicit productId, then fallback to keyword
+        var query = _context.ProductVariants.AsQueryable();
+
         if (productId.HasValue)
-        {
-            filter = v => v.ProductId == productId.Value;
-        }
-        else if (!string.IsNullOrWhiteSpace(keyword) && int.TryParse(keyword, out var n) && n > 0)
-        {
-            filter = v => v.ProductId == n;
-        }
+            query = query.Where(v => v.ProductId == productId.Value);
+        else if (!string.IsNullOrWhiteSpace(keyword) && int.TryParse(keyword, out var id) && id > 0)
+            query = query.Where(v => v.ProductId == id);
 
-        Expression<Func<ProductVariant, object>> orderBy = v => (object)v.Id;
+        var totalCount = await query.CountAsync();
 
-        var (items, totalCount) = await _variantRepository.GetPagedAsync(
-            page,
-            pageSize,
-            filter,
-            orderBy,
-            descending: false);
+        var items = await query
+            .OrderBy(v => v.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(v => new
+            {
+                v.Id,
+                v.ProductId,
+                Size = v.Size ?? "M?c ??nh",
+                Color = v.Color ?? "M?c ??nh",
+                v.Stock,
+                v.Price
+            })
+            .ToListAsync();
 
         return Ok(new
         {
@@ -65,8 +69,23 @@ public class ProductVariantsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var item = await _variantRepository.GetByIdAsync(id);
-        return item == null ? NotFound(new { message = "Product variant not found" }) : Ok(item);
+        var variant = await _context.ProductVariants
+            .Where(v => v.Id == id)
+            .Select(v => new
+            {
+                v.Id,
+                v.ProductId,
+                Size = v.Size ?? "M?c ??nh",
+                Color = v.Color ?? "M?c ??nh",
+                v.Stock,
+                v.Price
+            })
+            .FirstOrDefaultAsync();
+
+        if (variant == null)
+            return NotFound(new { message = "Product variant not found" });
+
+        return Ok(variant);
     }
 
     [HttpPost]
@@ -93,8 +112,10 @@ public class ProductVariantsController : ControllerBase
             Price = dto.Price
         };
 
-        var created = await _variantRepository.AddAsync(entity);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        _context.ProductVariants.Add(entity);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
     }
 
     [HttpPut("{id}")]
@@ -103,7 +124,7 @@ public class ProductVariantsController : ControllerBase
     {
         if (dto == null) return BadRequest(new { message = "Invalid request" });
 
-        var existing = await _variantRepository.GetByIdAsync(id);
+        var existing = await _context.ProductVariants.FindAsync(id);
         if (existing == null) return NotFound(new { message = "Product variant not found" });
         if (dto.Stock.HasValue && dto.Stock.Value < 0)
             return BadRequest(new { message = "Stock cannot be negative" });
@@ -124,7 +145,7 @@ public class ProductVariantsController : ControllerBase
         existing.Stock = dto.Stock ?? existing.Stock;
         existing.Price = dto.Price ?? existing.Price;
 
-        await _variantRepository.UpdateAsync(existing);
+        await _context.SaveChangesAsync();
         return Ok(existing);
     }
 
@@ -132,7 +153,12 @@ public class ProductVariantsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _variantRepository.DeleteByIdAsync(id);
+        var variant = await _context.ProductVariants.FindAsync(id);
+        if (variant != null)
+        {
+            _context.ProductVariants.Remove(variant);
+            await _context.SaveChangesAsync();
+        }
         return NoContent();
     }
 
@@ -154,4 +180,3 @@ public class ProductVariantsController : ControllerBase
         public decimal? Price { get; set; }
     }
 }
-

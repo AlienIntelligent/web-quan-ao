@@ -70,7 +70,7 @@ builder.Services.AddSwaggerGen(c =>
 // SQL Server Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
                       ?? builder.Configuration.GetConnectionString("ConnectedDb")
-                      ?? "Server=(localdb)\\mssqllocaldb;Database=BaseCoreSales;Trusted_Connection=True;MultipleActiveResultSets=true";
+                      ?? "Server=XD\\SQLSERVER2022;Database=BaseCoreSales;Trusted_Connection=True;MultipleActiveResultSets=true";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
