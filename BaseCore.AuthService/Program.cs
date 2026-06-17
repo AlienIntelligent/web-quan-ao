@@ -70,7 +70,7 @@ builder.Services.AddSwaggerGen(c =>
 // SQL Server Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
                       ?? builder.Configuration.GetConnectionString("ConnectedDb")
-                      ?? "Server=neyuhtlap\\sqlexpress;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
+                      ?? "Server=XD\\SQLSERVER2022;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
