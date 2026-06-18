@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
 // SQL Server Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? builder.Configuration.GetConnectionString("ConnectedDb")
-    ?? "Data Source=neyuhtlap\\sqlexpress;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+    ?? "Data Source=XD\\SQLSERVER2022;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
