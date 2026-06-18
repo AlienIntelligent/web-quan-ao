@@ -148,8 +148,8 @@ export const wishlistApi = {
 // Analytics API
 export const analyticsApi = {
   getStats: () => api.get("/analytics/stats"),
-  getRevenue: (start, end) =>
-    api.get("/analytics/revenue", { params: { start, end } }),
+  getRevenue: (start, end, groupBy = "day") =>
+    api.get("/analytics/revenue", { params: { start, end, groupBy } }),
   getBestSellers: (top = 5) =>
     api.get("/analytics/best-sellers", { params: { top } }),
 };
