@@ -23,7 +23,17 @@ namespace BaseCore.Services
             int page,
             int pageSize);
         Task<Promotion?> GetPromotionWithProductsAsync(int promotionId);
-        Task<PromotionApplicationResult> ApplyPromotionAsync(string code, decimal orderSubtotal, decimal shippingFee);
+        Task<PromotionApplicationResult> ApplyPromotionAsync(
+            string code,
+            decimal orderSubtotal,
+            decimal shippingFee,
+            IEnumerable<PromotionLine>? lines = null);
+    }
+
+    public class PromotionLine
+    {
+        public int ProductId { get; set; }
+        public decimal Subtotal { get; set; }
     }
 
     public class PromotionApplicationResult
@@ -31,6 +41,8 @@ namespace BaseCore.Services
         public Promotion Promotion { get; set; } = null!;
         public decimal DiscountAmount { get; set; }
         public decimal FinalTotal { get; set; }
+        public decimal EligibleSubtotal { get; set; }
+        public bool HasProductScope { get; set; }
         public string Message { get; set; } = "";
     }
 }

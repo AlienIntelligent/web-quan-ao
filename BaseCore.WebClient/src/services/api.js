@@ -73,6 +73,19 @@ export const productVariantApi = {
   delete: (id) => api.delete(`/product-variants/${id}`),
 };
 
+export const uploadApi = {
+  image: (file, folder = "products") => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+
+    return api.post("/uploads/image", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+};
 // Metadata API (Sizes/Colors)
 export const metadataApi = {
   getSizes: () => api.get("/sizes"),
@@ -157,6 +170,9 @@ export const promotionApi = {
   validate: (data) => api.post("/promotions/validate", data),
   create: (data) => api.post("/promotions", data),
   update: (id, data) => api.put(`/promotions/${id}`, data),
+  getProducts: (id) => api.get(`/promotions/${id}/products`),
+  updateProducts: (id, productIds) =>
+    api.put(`/promotions/${id}/products`, { productIds }),
   delete: (id) => api.delete(`/promotions/${id}`),
 };
 

@@ -98,7 +98,7 @@ const Categories = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="card-body">
+                        <div className="card-body p-0">
                             {loading ? (
                                 <div className="text-center py-5">
                                     <div className="spinner-border text-primary"></div>

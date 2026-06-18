@@ -125,7 +125,7 @@ const Product = () => {
 
   const roundedAvg = Math.round(averageRating || 0);
   const productImage = useMemo(() => {
-    const raw = product?.imageUrl;
+    const raw = selectedVariant?.imageUrl || product?.imageUrl;
     if (!raw || !String(raw).trim()) return "/img/products/product-1.jpg";
     if (String(raw).startsWith("http://") || String(raw).startsWith("https://") || String(raw).startsWith("/")) {
       return raw;
@@ -134,7 +134,7 @@ const Product = () => {
       return `/img/${raw}`;
     }
     return `/img/products/${raw}`;
-  }, [product]);
+  }, [product, selectedVariant]);
 
   const handleAddToCart = () => {
     if (!product) return;

@@ -127,7 +127,7 @@ const OriginsAdmin = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="card-body">
+                        <div className="card-body p-0">
                             {loading ? (
                                 <div className="text-center py-5">
                                     <div className="spinner-border text-primary"></div>
@@ -174,7 +174,7 @@ const OriginsAdmin = () => {
                                         </tbody>
                                     </table>
 
-                                    <div className="d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
+                                    <div className="admin-table-footer d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
                                         <span>Tổng: {totalCount} bản ghi</span>
                                         <nav>
                                             <ul className="pagination mb-0">

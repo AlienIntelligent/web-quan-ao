@@ -9,6 +9,8 @@ const ReviewsAdmin = () => {
   const [filterRating, setFilterRating] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
   const { isAdmin } = useAuth();
 
   const getCustomerName = (review) => {
@@ -92,6 +94,16 @@ const ReviewsAdmin = () => {
     }
   };
 
+  const openDetailModal = (review) => {
+    setSelectedReview(review);
+    setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedReview(null);
+  };
+
   const renderStars = (rating) =>
     Array.from({ length: 5 }, (_, i) => (
       <i
@@ -157,7 +169,7 @@ const ReviewsAdmin = () => {
                 </button>
               </form>
             </div>
-            <div className="card-body">
+            <div className="card-body p-0">
               {loading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary"></div>
@@ -173,7 +185,7 @@ const ReviewsAdmin = () => {
                         <th>Đánh giá</th>
                         <th>Nội dung</th>
                         <th>Ngày đăng</th>
-                        {isAdmin() && <th style={{ width: "80px" }}>Thao tác</th>}
+                        {isAdmin() && <th style={{ width: "100px" }}>Thao tác</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -219,6 +231,13 @@ const ReviewsAdmin = () => {
                             {isAdmin() && (
                               <td>
                                 <button
+                                  className="btn btn-sm btn-info mr-1"
+                                  onClick={() => openDetailModal(review)}
+                                  title="Xem chi tiết"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button
                                   className="btn btn-sm btn-danger"
                                   onClick={() => handleDelete(review.id)}
                                   title="Xóa"
@@ -233,7 +252,7 @@ const ReviewsAdmin = () => {
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center mt-3">
+                  <div className="admin-table-footer d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
                     <span>Tổng: {totalCount} đánh giá</span>
                     <nav>
                       <ul className="pagination mb-0">
@@ -267,6 +286,62 @@ const ReviewsAdmin = () => {
           </div>
         </div>
       </section>
+
+      {showDetailModal && selectedReview && (
+        <div className="modal fade show" style={{ display: "block" }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Chi tiết đánh giá #{selectedReview.id}</h5>
+                <button type="button" className="close" onClick={closeDetailModal}>
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <strong>Sản phẩm:</strong>
+                    <div>{selectedReview.productName || `SP #${selectedReview.productId}`}</div>
+                    <small className="text-muted">ID sản phẩm: {selectedReview.productId}</small>
+                  </div>
+                  <div className="col-md-6">
+                    <strong>Khách hàng:</strong>
+                    <div>{getCustomerName(selectedReview)}</div>
+                    <small className="text-muted">{selectedReview.userId}</small>
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <strong>Điểm đánh giá:</strong>
+                    <div className="mt-1">
+                      {renderStars(selectedReview.rating)}
+                      <span className="ml-2 text-muted">{selectedReview.rating}/5</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <strong>Ngày đăng:</strong>
+                    <div>
+                      {selectedReview.createdAt
+                        ? new Date(selectedReview.createdAt).toLocaleString("vi-VN")
+                        : "-"}
+                    </div>
+                  </div>
+                </div>
+                <div className="form-group mb-0">
+                  <label className="font-weight-bold">Nội dung đánh giá</label>
+                  <textarea className="form-control" rows="5" value={selectedReview.comment || ""} readOnly />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeDetailModal}>
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDetailModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 };

@@ -50,6 +50,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<WishlistItem> WishlistItems { get; set; }
 
+    public virtual DbSet<ProductVariantImage> ProductVariantImages { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Data Source=neyuhtlap\\sqlexpress;Initial Catalog=BaseCoreSales;Integrated Security=True;Encrypt=True;Trust Server Certificate=True");
 
@@ -288,6 +290,17 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.UserName).HasMaxLength(50);
         });
 
+        modelBuilder.Entity<ProductVariantImage>(entity =>
+        {
+            entity.ToTable("ProductVariantImages");
+
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+
+            entity.HasOne(e => e.ProductVariant)
+                .WithMany(v => v.ProductVariantImages)
+                .HasForeignKey(e => e.ProductVariantId);
+        });
+        
         OnModelCreatingPartial(modelBuilder);
     }
 

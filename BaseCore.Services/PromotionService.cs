@@ -135,7 +135,11 @@ namespace BaseCore.Services
             return promotion;
         }
 
-        public async Task<PromotionApplicationResult> ApplyPromotionAsync(string code, decimal orderSubtotal, decimal shippingFee)
+        public async Task<PromotionApplicationResult> ApplyPromotionAsync(
+            string code,
+            decimal orderSubtotal,
+            decimal shippingFee,
+            IEnumerable<PromotionLine>? lines = null)
         {
             if (string.IsNullOrWhiteSpace(code))
                 throw new ArgumentException("Promotion code is required", nameof(code));
@@ -163,7 +167,26 @@ namespace BaseCore.Services
             if (promotion.MinimumOrderAmount > 0 && orderSubtotal < promotion.MinimumOrderAmount)
                 throw new InvalidOperationException($"Đơn hàng tối thiểu {promotion.MinimumOrderAmount:N0} để dùng mã này.");
 
-            var discountAmount = CalculateDiscountAmount(promotion, orderSubtotal, shippingFee);
+            var scopedProductIds = promotion.PromotionProducts
+                .Select(pp => pp.ProductId)
+                .ToHashSet();
+            var hasProductScope = scopedProductIds.Count > 0;
+            var eligibleSubtotal = orderSubtotal;
+
+            if (hasProductScope)
+            {
+                if (lines == null)
+                    throw new InvalidOperationException("Ma giam gia nay chi ap dung cho mot so san pham.");
+
+                eligibleSubtotal = lines
+                    .Where(line => scopedProductIds.Contains(line.ProductId))
+                    .Sum(line => line.Subtotal);
+
+                if (eligibleSubtotal <= 0)
+                    throw new InvalidOperationException("Gio hang khong co san pham phu hop voi ma giam gia nay.");
+            }
+
+            var discountAmount = CalculateDiscountAmount(promotion, eligibleSubtotal, shippingFee);
             var finalTotal = Math.Max(0, orderSubtotal + shippingFee - discountAmount);
 
             return new PromotionApplicationResult
@@ -171,6 +194,8 @@ namespace BaseCore.Services
                 Promotion = promotion,
                 DiscountAmount = discountAmount,
                 FinalTotal = finalTotal,
+                EligibleSubtotal = eligibleSubtotal,
+                HasProductScope = hasProductScope,
                 Message = "Áp dụng mã giảm giá thành công."
             };
         }

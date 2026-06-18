@@ -328,6 +328,50 @@ body {
 .pagination .page-link {
   border-radius: 0 !important;
   padding: 0.5rem 0.75rem !important;
+  white-space: nowrap !important;
+}
+
+.admin-orders-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.admin-orders-table .order-customer-cell {
+  min-width: 0;
+}
+
+.admin-orders-table .order-action-cell {
+  white-space: nowrap;
+}
+
+.admin-orders-table .order-action-cell .btn-sm {
+  min-width: 2rem;
+}
+
+.admin-table-footer {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-table-footer nav {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-table-footer .pagination {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 0.25rem;
+}
+
+.admin-table-footer .page-link {
+  min-width: 2.4rem;
+  text-align: center;
+}
+
+.admin-table-footer .page-item:first-child .page-link,
+.admin-table-footer .page-item:last-child .page-link {
+  min-width: auto;
 }
 
 .main-footer {
