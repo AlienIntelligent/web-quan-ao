@@ -18,8 +18,10 @@ namespace BaseCore.Repository.EFCore
             decimal? maxPrice,
             int? sizeId,
             int? colorId,
+            string? sortBy,
             int page,
             int pageSize);
+        Task<Dictionary<int, int>> GetSoldCountsAsync(IEnumerable<int> productIds);
         Task<List<Product>> GetByCategoryAsync(int categoryId);
     }
 
@@ -36,6 +38,7 @@ namespace BaseCore.Repository.EFCore
             decimal? maxPrice,
             int? sizeId,
             int? colorId,
+            string? sortBy,
             int page,
             int pageSize)
         {
@@ -46,14 +49,18 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.ProductVariants)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(keyword))
+            if (!string.IsNullOrWhiteSpace(keyword))
             {
-                keyword = keyword.ToLower();
-                query = query.Where(p =>
-                    p.Name.ToLower().Contains(keyword) ||
-                    (p.Description != null && p.Description.ToLower().Contains(keyword)) ||
-                    p.Category.Name.ToLower().Contains(keyword) ||
-                    (p.ProductOrigin != null && p.ProductOrigin.Origin.Name.ToLower().Contains(keyword)));
+                var terms = keyword
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                foreach (var term in terms)
+                {
+                    var searchTerm = term;
+                    query = query.Where(p => p.Name.Contains(searchTerm));
+                }
             }
 
             if (categoryId.HasValue && categoryId > 0)
@@ -71,25 +78,59 @@ namespace BaseCore.Repository.EFCore
                 query = query.Where(p => p.Price <= maxPrice.Value);
             }
 
-            if (sizeId.HasValue)
+            if (sizeId.HasValue && colorId.HasValue)
+            {
+                query = query.Where(p => p.ProductVariants.Any(v =>
+                    v.SizeId == sizeId.Value &&
+                    v.ColorId == colorId.Value));
+            }
+            else if (sizeId.HasValue)
             {
                 query = query.Where(p => p.ProductVariants.Any(v => v.SizeId == sizeId.Value));
             }
-
-            if (colorId.HasValue)
+            else if (colorId.HasValue)
             {
                 query = query.Where(p => p.ProductVariants.Any(v => v.ColorId == colorId.Value));
             }
 
             var totalCount = await query.CountAsync();
 
+            query = (sortBy ?? "newest").Trim().ToLowerInvariant() switch
+            {
+                "price-asc" or "lowtohigh" => query.OrderBy(p => p.Price),
+                "price-desc" or "hightolow" => query.OrderByDescending(p => p.Price),
+                "sales" or "popular" => query.OrderByDescending(p =>
+                    p.OrderDetails
+                        .Where(od => od.Order.Status != "CANCELLED" && od.Order.Status != "RETURNED")
+                        .Sum(od => (int?)od.Quantity) ?? 0),
+                _ => query.OrderByDescending(p => p.Id)
+            };
+
             var products = await query
-                .OrderByDescending(p => p.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
             return (products, totalCount);
+        }
+
+        public async Task<Dictionary<int, int>> GetSoldCountsAsync(IEnumerable<int> productIds)
+        {
+            var ids = productIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, int>();
+
+            return await _context.Set<OrderDetail>()
+                .Where(od =>
+                    ids.Contains(od.ProductId) &&
+                    od.Order.Status != "CANCELLED" &&
+                    od.Order.Status != "RETURNED")
+                .GroupBy(od => od.ProductId)
+                .Select(group => new
+                {
+                    ProductId = group.Key,
+                    SoldCount = group.Sum(detail => detail.Quantity)
+                })
+                .ToDictionaryAsync(item => item.ProductId, item => item.SoldCount);
         }
 
         public async Task<List<Product>> GetByCategoryAsync(int categoryId)

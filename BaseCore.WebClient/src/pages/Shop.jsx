@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import LayoutPublic from "../components/LayoutPublic";
 import { cartStorage, categoryApi, productApi, metadataApi, wishlistApi } from "../services/api";
 import { alertSuccess, alertError } from "../services/swal";
@@ -23,6 +23,7 @@ const Shop = () => {
     const [error, setError] = useState("");
     const [sortBy, setSortBy] = useState("newest");
     const [wishlist, setWishlist] = useState([]);
+    const navigate = useNavigate();
 
     const loadData = async (filters) => {
         const response = await productApi.search({
@@ -32,6 +33,7 @@ const Shop = () => {
             maxPrice: filters.maxPrice || undefined,
             sizeId: filters.sizeId || undefined,
             colorId: filters.colorId || undefined,
+            sortBy: filters.sortBy || "newest",
             page: filters.page,
             pageSize: 40,
         });
@@ -56,10 +58,12 @@ const Shop = () => {
 
     const loadWishlist = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             if (token) {
                 const res = await wishlistApi.get();
                 setWishlist(res.data || []);
+            } else {
+                setWishlist([]);
             }
         } catch (err) {
             console.error("Failed to load wishlist", err);
@@ -80,6 +84,7 @@ const Shop = () => {
             maxPrice: searchParams.get("maxPrice") || "",
             sizeId: searchParams.get("sizeId") || "",
             colorId: searchParams.get("colorId") || "",
+            sortBy: searchParams.get("sortBy") || "newest",
             page: Number.isFinite(queryPage) && queryPage > 0 ? queryPage : 1,
         };
 
@@ -89,6 +94,7 @@ const Shop = () => {
         setMaxPrice(nextFilters.maxPrice);
         setSizeId(nextFilters.sizeId);
         setColorId(nextFilters.colorId);
+        setSortBy(nextFilters.sortBy);
         setPage(nextFilters.page);
         setError("");
 
@@ -99,18 +105,31 @@ const Shop = () => {
         });
     }, [searchParams]);
 
-    const buildSearchParams = (nextPage = 1) => {
+    const buildSearchParams = (nextPage = 1, overrides = {}) => {
+        const nextFilters = {
+            keyword,
+            categoryId,
+            minPrice,
+            maxPrice,
+            sizeId,
+            colorId,
+            sortBy,
+            ...overrides,
+        };
         const params = new URLSearchParams();
-        const normalizedKeyword = keyword.trim();
-        const normalizedMinPrice = String(minPrice).trim();
-        const normalizedMaxPrice = String(maxPrice).trim();
+        const normalizedKeyword = String(nextFilters.keyword || "").trim();
+        const normalizedMinPrice = String(nextFilters.minPrice ?? "").trim();
+        const normalizedMaxPrice = String(nextFilters.maxPrice ?? "").trim();
 
         if (normalizedKeyword) params.set("keyword", normalizedKeyword);
-        if (categoryId) params.set("categoryId", categoryId);
+        if (nextFilters.categoryId) params.set("categoryId", nextFilters.categoryId);
         if (normalizedMinPrice) params.set("minPrice", normalizedMinPrice);
         if (normalizedMaxPrice) params.set("maxPrice", normalizedMaxPrice);
-        if (sizeId) params.set("sizeId", sizeId);
-        if (colorId) params.set("colorId", colorId);
+        if (nextFilters.sizeId) params.set("sizeId", nextFilters.sizeId);
+        if (nextFilters.colorId) params.set("colorId", nextFilters.colorId);
+        if (nextFilters.sortBy && nextFilters.sortBy !== "newest") {
+            params.set("sortBy", nextFilters.sortBy);
+        }
         if (nextPage > 1) params.set("page", String(nextPage));
 
         return params;
@@ -121,11 +140,18 @@ const Shop = () => {
         const min = minPrice === "" ? null : Number(minPrice);
         const max = maxPrice === "" ? null : Number(maxPrice);
 
+        if ((min !== null && (!Number.isFinite(min) || min < 0)) ||
+            (max !== null && (!Number.isFinite(max) || max < 0))) {
+            setError("Khoảng giá phải là số không âm.");
+            return;
+        }
+
         if (min !== null && max !== null && min > max) {
             setError("Giá từ không được lớn hơn giá đến.");
             return;
         }
 
+        setError("");
         setSearchParams(buildSearchParams(1));
     };
 
@@ -134,31 +160,45 @@ const Shop = () => {
         window.scrollTo(0, 0);
     };
 
+    const handleSortChange = (nextSort) => {
+        setSortBy(nextSort);
+        setSearchParams(buildSearchParams(1, { sortBy: nextSort }));
+    };
+
     const addToCart = (product) => {
         cartStorage.addItem(product, 1);
         alertSuccess("Đã thêm!", `${product.name} đã được thêm vào giỏ hàng.`);
     };
 
-    const toggleWishlist = async (productId) => {
-        const token = localStorage.getItem('token');
+    const toggleWishlist = async (productId, variantId = null) => {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) {
             alertError("Lỗi", "Vui lòng đăng nhập để sử dụng tính năng này.");
             return;
         }
 
         try {
-            const isInWishlist = wishlist.some(x => x.productId === productId);
+            const isInWishlist = wishlist.some(
+                x => x.productId === productId && (x.variantId || null) === (variantId || null)
+            );
             if (isInWishlist) {
-                await wishlistApi.remove(productId);
+                await wishlistApi.remove(productId, variantId);
                 alertSuccess("Đã xóa!", "Sản phẩm đã được xóa khỏi danh sách yêu thích.");
             } else {
-                await wishlistApi.add(productId);
+                await wishlistApi.add(productId, variantId);
                 alertSuccess("Đã thêm!", "Sản phẩm đã được thêm vào danh sách yêu thích.");
             }
-            loadWishlist();
+            await loadWishlist();
         } catch (err) {
-            alertError("Lỗi", "Không thể cập nhật danh sách yêu thích.");
+            const message = err?.response?.data?.message
+                || "Không thể cập nhật danh sách yêu thích.";
+            alertError("Lỗi", message);
         }
+    };
+
+    const buyNow = (product) => {
+        cartStorage.addItem(product, 1);
+        navigate("/shopping-cart");
     };
 
     const resolveProductImage = (item) => {
@@ -198,7 +238,7 @@ const Shop = () => {
                                             className={!categoryId ? "active" : ""}
                                             onClick={() => {
                                                 setCategoryId("");
-                                                setSearchParams(buildSearchParams(1));
+                                                setSearchParams(buildSearchParams(1, { categoryId: "" }));
                                             }}
                                         >
                                             Tất cả sản phẩm
@@ -209,7 +249,7 @@ const Shop = () => {
                                                 className={categoryId == c.id ? "active" : ""}
                                                 onClick={() => {
                                                     setCategoryId(c.id);
-                                                    setSearchParams(buildSearchParams(1));
+                                                    setSearchParams(buildSearchParams(1, { categoryId: c.id }));
                                                 }}
                                             >
                                                 {c.name}
@@ -226,7 +266,8 @@ const Shop = () => {
                                     <div className="filter-content mt-3">
                                         <div className="d-flex align-items-center mb-2">
                                             <input
-                                                type="number"
+                                                 type="number"
+                                                 min="0"
                                                 className="form-control form-control-sm"
                                                 placeholder="₫ TỪ"
                                                 value={minPrice}
@@ -234,7 +275,8 @@ const Shop = () => {
                                             />
                                             <span className="mx-2">-</span>
                                             <input
-                                                type="number"
+                                                 type="number"
+                                                 min="0"
                                                 className="form-control form-control-sm"
                                                 placeholder="₫ ĐẾN"
                                                 value={maxPrice}
@@ -261,10 +303,7 @@ const Shop = () => {
                                                 onClick={() => {
                                                     const nextSize = sizeId == s.id ? "" : s.id;
                                                     setSizeId(nextSize);
-                                                    // We use a small timeout to let state update or just call setSearchParams directly
-                                                    const p = buildSearchParams(1);
-                                                    if (nextSize) p.set("sizeId", nextSize); else p.delete("sizeId");
-                                                    setSearchParams(p);
+                                                    setSearchParams(buildSearchParams(1, { sizeId: nextSize }));
                                                 }}
                                             >
                                                 {s.name}
@@ -284,9 +323,7 @@ const Shop = () => {
                                                 onClick={() => {
                                                     const nextColor = colorId == c.id ? "" : c.id;
                                                     setColorId(nextColor);
-                                                    const p = buildSearchParams(1);
-                                                    if (nextColor) p.set("colorId", nextColor); else p.delete("colorId");
-                                                    setSearchParams(p);
+                                                    setSearchParams(buildSearchParams(1, { colorId: nextColor }));
                                                 }}
                                             >
                                                 {c.name}
@@ -329,30 +366,31 @@ const Shop = () => {
                                 <div className="btn-group mr-3">
                                     <button
                                         className={`btn btn-sm px-4 ${sortBy === "popular" ? "btn-warning text-white" : "btn-light"}`}
-                                        onClick={() => setSortBy("popular")}
+                                        onClick={() => handleSortChange("popular")}
                                     >
                                         Phổ biến
                                     </button>
                                     <button
                                         className={`btn btn-sm px-4 ${sortBy === "newest" ? "btn-warning text-white" : "btn-light"}`}
-                                        onClick={() => setSortBy("newest")}
+                                        onClick={() => handleSortChange("newest")}
                                     >
                                         Mới nhất
                                     </button>
                                     <button
                                         className={`btn btn-sm px-4 ${sortBy === "sales" ? "btn-warning text-white" : "btn-light"}`}
-                                        onClick={() => setSortBy("sales")}
+                                        onClick={() => handleSortChange("sales")}
                                     >
                                         Bán chạy
                                     </button>
                                 </div>
                                 <select
                                     className="form-control form-control-sm w-auto mr-auto"
-                                    onChange={(e) => setSortBy(e.target.value)}
+                                    value={["price-asc", "price-desc"].includes(sortBy) ? sortBy : ""}
+                                    onChange={(e) => handleSortChange(e.target.value || "newest")}
                                 >
                                     <option value="">Giá</option>
-                                    <option value="lowToHigh">Giá: Thấp đến Cao</option>
-                                    <option value="highToLow">Giá: Cao đến Thấp</option>
+                                    <option value="price-asc">Giá: Thấp đến Cao</option>
+                                    <option value="price-desc">Giá: Cao đến Thấp</option>
                                 </select>
                                 <div className="pagination-info" style={{ fontSize: "14px" }}>
                                     <span className="text-warning font-weight-bold">{page}</span>/
@@ -408,10 +446,13 @@ const Shop = () => {
                                                     <li className="w-icon">
                                                         <a
                                                             href="#"
-                                                            onClick={(e) => { e.preventDefault(); toggleWishlist(item.id); }}
-                                                            className={wishlist.some(x => x.productId === item.id) ? "text-warning" : ""}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                toggleWishlist(item.id, null);
+                                                            }}
+                                                            className={wishlist.some(x => x.productId === item.id && (x.variantId || null) === null) ? "text-warning" : ""}
                                                         >
-                                                            <i className={wishlist.some(x => x.productId === item.id) ? "fa fa-heart" : "fa fa-heart-o"}></i>
+                                                            <i className={wishlist.some(x => x.productId === item.id && (x.variantId || null) === null) ? "fa fa-heart" : "fa fa-heart-o"}></i>
                                                             <span className="tooltip-text">Yêu thích</span>
                                                         </a>
                                                     </li>
@@ -446,9 +487,16 @@ const Shop = () => {
                                                             className="sold-count text-muted"
                                                             style={{ fontSize: "10px" }}
                                                         >
-                                                            Đã bán {Math.floor(Math.random() * 100)}+
+                                                            Đã bán {item.soldCount || 0}
                                                         </div>
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-warning text-white mt-2 w-100"
+                                                        onClick={() => buyNow(item)}
+                                                    >
+                                                        Mua ngay
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>

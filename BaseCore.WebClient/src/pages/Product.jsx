@@ -6,7 +6,9 @@ import {
     productApi,
     productVariantApi,
     reviewApi,
+    wishlistApi,
 } from "../services/api";
+import { alertSuccess, alertError } from "../services/swal";
 import SizeGuideModal from "../components/SizeGuideModal"; // Import modal
 
 const Product = () => {
@@ -26,6 +28,8 @@ const Product = () => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [wishlistLoading, setWishlistLoading] = useState(false);
     const sliderRef = useRef(null);
 
     // State cho modal hướng dẫn size
@@ -49,6 +53,7 @@ const Product = () => {
         const load = async () => {
             setLoading(true);
             setError("");
+            setIsFavorite(false);
             try {
                 const [pRes, vRes, rRes] = await Promise.all([
                     productApi.getById(pid),
@@ -81,6 +86,16 @@ const Product = () => {
                     const relItems = (relRes?.data?.items || []).filter(x => x.id !== pid);
                     setRelatedProducts(relItems);
                 }
+
+                const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+                if (token) {
+                    try {
+                        const wishlistRes = await wishlistApi.check(pid, null);
+                        setIsFavorite(Boolean(wishlistRes?.data?.exists));
+                    } catch (wishlistError) {
+                        console.error("Failed to check wishlist", wishlistError);
+                    }
+                }
             } catch (e) {
                 console.error(e);
                 setError(e?.response?.data?.message || "Không tải được sản phẩm");
@@ -103,12 +118,12 @@ const Product = () => {
     const colorOptions = useMemo(() => {
         const colors = new Set();
         (variants || []).forEach(v => {
-            if (v.size === selectedSize && v.color) {
+            if (v.color) {
                 colors.add(v.color);
             }
         });
         return Array.from(colors);
-    }, [variants, selectedSize]);
+    }, [variants]);
 
     const selectedVariant = useMemo(() => {
         if (!variants?.length) return null;
@@ -154,14 +169,41 @@ const Product = () => {
                 variantId: selectedVariant?.id,
                 name: product.name,
                 price: displayPrice,
-                size: selectedVariant?.size,
-                color: selectedVariant?.color,
+                size: selectedSize ?? selectedVariant?.size,
+                color: selectedColor ?? selectedVariant?.color,
                 imageUrl: productImage,
             },
             qty,
         );
 
         navigate("/shopping-cart");
+    };
+
+    const handleToggleWishlist = async () => {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        if (!token) {
+            alertError("Lỗi", "Vui lòng đăng nhập để sử dụng tính năng này.");
+            return;
+        }
+
+        setWishlistLoading(true);
+        try {
+            if (isFavorite) {
+                await wishlistApi.remove(product.id, null);
+                setIsFavorite(false);
+                alertSuccess("Đã xóa!", "Sản phẩm đã được xóa khỏi danh sách yêu thích.");
+            } else {
+                await wishlistApi.add(product.id, null);
+                setIsFavorite(true);
+                alertSuccess("Đã thêm!", "Sản phẩm đã được thêm vào danh sách yêu thích.");
+            }
+        } catch (wishlistError) {
+            const message = wishlistError?.response?.data?.message
+                || "Không thể cập nhật danh sách yêu thích.";
+            alertError("Lỗi", message);
+        } finally {
+            setWishlistLoading(false);
+        }
     };
 
     if (loading) {
@@ -235,10 +277,20 @@ const Product = () => {
                                     <i className="fa fa-twitter" style={{ color: '#1da1f2', cursor: 'pointer' }}></i>
                                 </div>
                                 <div style={{ width: '1px', height: '15px', backgroundColor: '#ddd' }}></div>
-                                <div className="d-flex align-items-center" style={{ cursor: 'pointer' }}>
-                                    <i className="fa fa-heart-o mr-2" style={{ color: '#ff424e' }}></i>
-                                    <span>Đã thích (1,2k)</span>
-                                </div>
+                                <button
+                                    type="button"
+                                    className="d-flex align-items-center border-0 bg-transparent p-0"
+                                    style={{ cursor: wishlistLoading ? 'wait' : 'pointer' }}
+                                    onClick={handleToggleWishlist}
+                                    disabled={wishlistLoading}
+                                    aria-pressed={isFavorite}
+                                >
+                                    <i
+                                        className={`fa ${isFavorite ? "fa-heart" : "fa-heart-o"} mr-2`}
+                                        style={{ color: '#ff424e' }}
+                                    ></i>
+                                    <span>{isFavorite ? "Đã thích" : "Yêu thích"}</span>
+                                </button>
                             </div>
                         </div>
                         <div className="col-lg-6">
@@ -272,7 +324,7 @@ const Product = () => {
                                         <div style={{ width: '1px', height: '16px', backgroundColor: '#ddd' }}></div>
                                         <div className="d-flex align-items-center" style={{ paddingLeft: '15px' }}>
                                             <span style={{ fontWeight: '500', lineHeight: '1', marginRight: '5px', color: '#222' }}>
-                                                {Math.floor(Math.random() * 5000)}+
+                                                {product.soldCount || 0}
                                             </span>
                                             <span className="text-muted" style={{ lineHeight: '1' }}>Đã Bán</span>
                                         </div>
@@ -344,11 +396,7 @@ const Product = () => {
                                                                     name="size"
                                                                     value={size}
                                                                     checked={isActive}
-                                                                    onChange={() => {
-                                                                        setSelectedSize(size);
-                                                                        const firstColor = variants.find(v => v.size === size)?.color;
-                                                                        if (firstColor) setSelectedColor(firstColor);
-                                                                    }}
+                                                                    onChange={() => setSelectedSize(size)}
                                                                     style={{ display: 'none' }}
                                                                 />
                                                                 {size}
@@ -644,7 +692,7 @@ const Product = () => {
                                                                 {formatMoney(rel.price)}
                                                             </div>
                                                             <div className="sold-count text-muted" style={{ fontSize: '10px' }}>
-                                                                Đã bán {Math.floor(Math.random() * 50)}+
+                                                                Đã bán {rel.soldCount || 0}
                                                             </div>
                                                         </div>
                                                     </div>

@@ -94,7 +94,9 @@ namespace BaseCore.AuthService.Controllers
                     Name = request.Name ?? request.Username,
                     Email = request.Email ?? string.Empty,
                     Phone = request.Phone ?? string.Empty,
-                    UserType = request.UserType ?? 0 // Default to regular user if not specified
+                    // Public registration is always a customer account.
+                    // Never trust a role sent from the browser.
+                    UserType = 0
                 };
 
                 var createdUser = await _userService.Create(user, request.Password, false);
@@ -154,8 +156,6 @@ namespace BaseCore.AuthService.Controllers
         [JsonPropertyName("phone")]
         public string? Phone { get; set; }
 
-        [JsonPropertyName("userType")]
-        public int? UserType { get; set; }
     }
 }
 

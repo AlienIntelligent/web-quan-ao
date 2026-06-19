@@ -103,7 +103,7 @@ const OrderTracking = () => {
                 </div>
                 <div>
                   <span>Tổng thanh toán</span>
-                  <h4>{formatMoney(order.totalAmount)}</h4>
+                  <h4>{formatMoney(order.finalAmount ?? order.totalAmount)}</h4>
                 </div>
               </div>
 

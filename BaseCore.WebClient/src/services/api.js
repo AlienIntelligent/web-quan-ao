@@ -83,6 +83,7 @@ export const metadataApi = {
 export const reviewApi = {
   getByProductId: (productId, params = {}) =>
     api.get("/reviews", { params: { productId, ...params } }),
+  getMine: () => api.get("/reviews/my"),
   getById: (id) => api.get(`/reviews/${id}`),
   create: (data) => api.post("/reviews", data),
   update: (id, data) => api.put(`/reviews/${id}`, data),
@@ -118,6 +119,7 @@ export const cartApi = {
   remove: (productId, variantId) =>
     api.delete("/cart/remove", { params: { productId, variantId } }),
   clear: () => api.delete("/cart/clear"),
+  sync: (items) => api.put("/cart/sync", { items }),
 };
 
 // Wishlist API
@@ -192,6 +194,7 @@ const CART_KEY = "fashi_cart";
 const CART_EVENT = "fashi-cart-updated";
 const COUPON_KEY = "fashi_coupon";
 const COUPON_EVENT = "fashi-coupon-updated";
+let cartSyncTimer = null;
 
 const readCart = () => {
   try {
@@ -202,14 +205,55 @@ const readCart = () => {
   }
 };
 
-const writeCart = (items) => {
+const hasAuthToken = () =>
+  Boolean(localStorage.getItem("token") || sessionStorage.getItem("token"));
+
+const scheduleCartSync = (items) => {
+  if (!hasAuthToken()) return;
+
+  window.clearTimeout(cartSyncTimer);
+  cartSyncTimer = window.setTimeout(() => {
+    cartApi
+      .sync(
+        items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId || null,
+          quantity: item.quantity,
+        })),
+      )
+      .catch((error) => console.error("Cart sync failed", error));
+  }, 250);
+};
+
+const writeCart = (items, syncRemote = true) => {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event(CART_EVENT));
+  if (syncRemote) scheduleCartSync(items);
 };
+
+const mapServerCartItem = (item) => ({
+  productId: item.productId,
+  variantId: item.variantId || 0,
+  name: item.product?.name || `Sản phẩm #${item.productId}`,
+  price: Number(
+    item.productVariant?.price ?? item.product?.price ?? item.unitPrice ?? 0,
+  ),
+  size:
+    item.productVariant?.size ||
+    item.productVariant?.sizeNavigation?.name ||
+    null,
+  color:
+    item.productVariant?.color ||
+    item.productVariant?.colorNavigation?.name ||
+    null,
+  imageUrl: item.product?.imageUrl || "/img/products/product-1.jpg",
+  quantity: item.quantity,
+});
 
 export const cartStorage = {
   eventName: CART_EVENT,
   getItems: () => readCart(),
+  setItems: (items) => writeCart(items),
   addItem: (product, quantity = 1) => {
     const items = readCart();
     const variantId = product.variantId || 0;
@@ -251,6 +295,40 @@ export const cartStorage = {
     );
   },
   clear: () => writeCart([]),
+  clearLocal: () => writeCart([], false),
+  syncWithServer: async () => {
+    if (!hasAuthToken()) return readCart();
+
+    const response = await cartApi.get();
+    const remoteItems = (response.data?.items || []).map(mapServerCartItem);
+    const merged = [...remoteItems];
+
+    readCart().forEach((localItem) => {
+      const existing = merged.find(
+        (item) =>
+          item.productId === localItem.productId &&
+          (item.variantId || 0) === (localItem.variantId || 0),
+      );
+
+      if (existing) {
+        existing.quantity = Math.max(existing.quantity, localItem.quantity);
+        existing.name = localItem.name || existing.name;
+        existing.imageUrl = localItem.imageUrl || existing.imageUrl;
+      } else {
+        merged.push(localItem);
+      }
+    });
+
+    writeCart(merged, false);
+    await cartApi.sync(
+      merged.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        quantity: item.quantity,
+      })),
+    );
+    return merged;
+  },
   getSummary: () => {
     const items = readCart();
     const count = items.reduce((sum, x) => sum + x.quantity, 0);

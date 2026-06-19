@@ -13,6 +13,9 @@ namespace BaseCore.Services
         Task<decimal> GetCartTotalAsync(string userId);
         Task<int> GetCartItemCountAsync(string userId);
         Task ClearCartAsync(string userId);
+        Task<List<CartDetail>> ReplaceCartAsync(
+            string userId,
+            List<(int ProductId, int? VariantId, int Quantity)> items);
         Task<(List<CartDetail> Items, decimal Total, int ItemCount)> GetCartWithDetailsAsync(string userId);
         Task<bool> IsProductInCartAsync(string userId, int productId, int? variantId);
     }

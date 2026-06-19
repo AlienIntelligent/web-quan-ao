@@ -11,6 +11,8 @@ namespace BaseCore.Repository.EFCore
             int productId,
             int page,
             int pageSize);
+        Task<List<Review>> GetByUserIdAsync(string userId);
+        Task<Review?> GetByUserAndProductAsync(string userId, int productId);
     }
 
     public class ReviewRepository : Repository<Review>, IReviewRepository
@@ -40,6 +42,20 @@ namespace BaseCore.Repository.EFCore
                 .ToListAsync();
 
             return (items, totalCount, averageRating);
+        }
+
+        public async Task<List<Review>> GetByUserIdAsync(string userId)
+        {
+            return await _dbSet
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Review?> GetByUserAndProductAsync(string userId, int productId)
+        {
+            return await _dbSet
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.ProductId == productId);
         }
     }
 }

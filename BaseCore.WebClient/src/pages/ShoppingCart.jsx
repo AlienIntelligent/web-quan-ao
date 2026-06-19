@@ -22,7 +22,7 @@ const ShoppingCart = () => {
     window.addEventListener("storage", syncCart);
 
     // Fetch available promotions
-    promotionApi.getAll({ pageSize: 100 }).then(res => {
+    promotionApi.getAll({ pageSize: 100, isActive: true }).then(res => {
       setAvailablePromotions(res.data.items || []);
     }).catch(err => console.error("Error fetching promotions:", err));
 
@@ -90,8 +90,7 @@ const ShoppingCart = () => {
         ? { ...x, quantity: Math.max(1, nextQty) } 
         : x
     );
-    localStorage.setItem('fashi_cart', JSON.stringify(items));
-    window.dispatchEvent(new Event('fashi-cart-updated'));
+    cartStorage.setItems(items);
   };
 
   const removeItem = async (productId, variantId) => {
@@ -104,8 +103,7 @@ const ShoppingCart = () => {
 
     if (result.isConfirmed) {
       const items = cartStorage.getItems().filter(x => !(x.productId === productId && (x.variantId || 0) === (variantId || 0)));
-      localStorage.setItem('fashi_cart', JSON.stringify(items));
-      window.dispatchEvent(new Event('fashi-cart-updated'));
+      cartStorage.setItems(items);
       alertSuccess("Đã xóa!", "Sản phẩm đã được xóa khỏi giỏ hàng.");
     }
   };
@@ -203,8 +201,7 @@ const ShoppingCart = () => {
     );
     if (result.isConfirmed) {
       const items = cartStorage.getItems().filter(x => !selectedItemIds.includes(`${x.productId}-${x.variantId || 0}`));
-      localStorage.setItem('fashi_cart', JSON.stringify(items));
-      window.dispatchEvent(new Event('fashi-cart-updated'));
+      cartStorage.setItems(items);
       setSelectedItemIds([]);
       alertSuccess("Đã xóa!", "Các sản phẩm đã được loại bỏ.");
     }

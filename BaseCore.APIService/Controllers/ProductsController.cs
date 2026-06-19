@@ -34,9 +34,20 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] decimal? maxPrice,
             [FromQuery] int? sizeId,
             [FromQuery] int? colorId,
+            [FromQuery] string? sortBy,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            keyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword.Trim();
+
+            if (minPrice < 0 || maxPrice < 0)
+                return BadRequest(new { message = "Khoảng giá không được là số âm." });
+
+            if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+                return BadRequest(new { message = "Giá từ không được lớn hơn giá đến." });
+
             var (products, totalCount) = await _productRepository.SearchAsync(
                 keyword,
                 categoryId,
@@ -44,8 +55,10 @@ namespace BaseCore.APIService.Controllers
                 maxPrice,
                 sizeId,
                 colorId,
+                sortBy,
                 page,
                 pageSize);
+            var soldCounts = await _productRepository.GetSoldCountsAsync(products.Select(product => product.Id));
 
             // IMPORTANT:
             // Trả DTO/projection để tránh vòng tham chiếu khi serialize entity (Product <-> Category).
@@ -72,7 +85,8 @@ namespace BaseCore.APIService.Controllers
                 VariantCount = p.ProductVariants?.Count ?? 0,
                 TotalStock = p.ProductVariants != null && p.ProductVariants.Any()
                     ? p.ProductVariants.Sum(v => v.Stock)
-                    : p.Stock
+                    : p.Stock,
+                SoldCount = soldCounts.GetValueOrDefault(p.Id)
             }).ToList();
 
             return Ok(new
@@ -94,6 +108,7 @@ namespace BaseCore.APIService.Controllers
             var product = await _productRepository.GetByIdAsync(id);
             if (product == null)
                 return NotFound(new { message = "Product not found" });
+            var soldCounts = await _productRepository.GetSoldCountsAsync(new[] { id });
 
             var dto = new ProductDto
             {
@@ -117,7 +132,8 @@ namespace BaseCore.APIService.Controllers
                 VariantCount = product.ProductVariants?.Count ?? 0,
                 TotalStock = product.ProductVariants != null && product.ProductVariants.Any()
                     ? product.ProductVariants.Sum(v => v.Stock)
-                    : product.Stock
+                    : product.Stock,
+                SoldCount = soldCounts.GetValueOrDefault(product.Id)
             };
 
             return Ok(dto);
@@ -127,7 +143,7 @@ namespace BaseCore.APIService.Controllers
         /// Create new product (requires authentication)
         /// </summary>
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
         {
             // Validate category exists
@@ -158,7 +174,7 @@ namespace BaseCore.APIService.Controllers
         /// Update product (requires authentication)
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateDto dto)
         {
             var product = await _productRepository.GetByIdAsync(id);
@@ -186,7 +202,7 @@ namespace BaseCore.APIService.Controllers
         /// Delete product (requires authentication)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _productRepository.GetByIdAsync(id);
@@ -246,6 +262,7 @@ namespace BaseCore.APIService.Controllers
         public string? OriginName { get; set; }
         public int VariantCount { get; set; }
         public int TotalStock { get; set; }
+        public int SoldCount { get; set; }
     }
 
     public class CategoryBriefDto

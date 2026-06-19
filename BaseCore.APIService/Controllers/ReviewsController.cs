@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using BaseCore.Entities;
 using BaseCore.Repository.EFCore;
 
@@ -14,15 +15,37 @@ public class ReviewsController : ControllerBase
     private readonly IReviewRepository _reviewRepository;
     private readonly IProductRepository _productRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IOrderRepository _orderRepository;
 
     public ReviewsController(
         IReviewRepository reviewRepository,
         IProductRepository productRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IOrderRepository orderRepository)
     {
         _reviewRepository = reviewRepository;
         _productRepository = productRepository;
         _userRepository = userRepository;
+        _orderRepository = orderRepository;
+    }
+
+    [HttpGet("my")]
+    [Authorize]
+    public async Task<IActionResult> GetMine()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+        var reviews = await _reviewRepository.GetByUserIdAsync(userId);
+        return Ok(reviews.Select(r => new ReviewDto
+        {
+            Id = r.Id,
+            ProductId = r.ProductId,
+            UserId = r.UserId,
+            Rating = r.Rating,
+            Comment = r.Comment,
+            CreatedAt = r.CreatedAt
+        }));
     }
 
     // Public: list reviews for product + rating summary
@@ -95,24 +118,39 @@ public class ReviewsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] ReviewCreateDto dto)
     {
         if (dto == null) return BadRequest(new { message = "Invalid request" });
-        if (dto.Rating < 1 || dto.Rating > 5) return BadRequest(new { message = "Rating must be 1-5" });
+        if (dto.Rating < 1 || dto.Rating > 5) return BadRequest(new { message = "Số sao phải từ 1 đến 5." });
+        if (dto.Comment?.Length > 1000) return BadRequest(new { message = "Nội dung đánh giá không được vượt quá 1000 ký tự." });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
 
         var product = await _productRepository.GetByIdAsync(dto.ProductId);
-        if (product == null) return BadRequest(new { message = "Product not found" });
+        if (product == null) return BadRequest(new { message = "Không tìm thấy sản phẩm." });
 
-        var user = await _userRepository.GetByIdAsync(dto.UserId);
-        if (user == null) return BadRequest(new { message = "User not found" });
+        var order = await _orderRepository.GetWithDetailsAsync(dto.OrderId);
+        if (order == null || order.UserId != userId)
+            return BadRequest(new { message = "Không tìm thấy đơn hàng của bạn." });
+
+        if (!string.Equals(order.Status, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Bạn chỉ có thể đánh giá sau khi đơn hàng đã giao thành công." });
+
+        if (!order.OrderDetailOrders.Any(detail => detail.ProductId == dto.ProductId))
+            return BadRequest(new { message = "Sản phẩm không thuộc đơn hàng này." });
+
+        var existing = await _reviewRepository.GetByUserAndProductAsync(userId, dto.ProductId);
+        if (existing != null)
+            return Conflict(new { message = "Bạn đã đánh giá sản phẩm này." });
 
         var entity = new Review
         {
             ProductId = dto.ProductId,
-            UserId = dto.UserId,
+            UserId = userId,
             Rating = dto.Rating,
-            Comment = dto.Comment,
+            Comment = dto.Comment?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -177,8 +215,8 @@ public class ReviewsController : ControllerBase
 
     public class ReviewCreateDto
     {
+        public int OrderId { get; set; }
         public int ProductId { get; set; }
-        public string UserId { get; set; } = "";
         public int Rating { get; set; }
         public string? Comment { get; set; }
     }

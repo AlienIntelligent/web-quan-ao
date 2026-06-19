@@ -15,6 +15,7 @@ const Products = () => {
     const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
+    const [searchError, setSearchError] = useState('');
 
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -45,7 +46,7 @@ const Products = () => {
 
     useEffect(() => {
         loadProducts();
-    }, [page, keyword, categoryId, minPrice, maxPrice]);
+    }, [page]);
 
     const loadCategories = async () => {
         try {
@@ -65,6 +66,7 @@ const Products = () => {
 
     const loadProducts = async () => {
         setLoading(true);
+        setSearchError('');
         try {
             const response = await productApi.search({
                 keyword,
@@ -82,6 +84,10 @@ const Products = () => {
             setTotalCount(payload?.totalCount ?? 0);
         } catch (error) {
             console.error('Failed to load products:', error);
+            setProducts([]);
+            setTotalPages(0);
+            setTotalCount(0);
+            setSearchError(error.response?.data?.message || 'Không thể tải danh sách sản phẩm.');
         } finally {
             setLoading(false);
         }
@@ -105,8 +111,26 @@ const Products = () => {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        setPage(1);
-        loadProducts();
+        const min = minPrice === '' ? null : Number(minPrice);
+        const max = maxPrice === '' ? null : Number(maxPrice);
+
+        if ((min !== null && (!Number.isFinite(min) || min < 0)) ||
+            (max !== null && (!Number.isFinite(max) || max < 0))) {
+            setSearchError('Khoảng giá phải là số không âm.');
+            return;
+        }
+
+        if (min !== null && max !== null && min > max) {
+            setSearchError('Giá từ không được lớn hơn giá đến.');
+            return;
+        }
+
+        setSearchError('');
+        if (page === 1) {
+            loadProducts();
+        } else {
+            setPage(1);
+        }
     };
 
     const openModal = (product = null) => {
@@ -318,6 +342,9 @@ const Products = () => {
                                         <button type="submit" className="btn btn-primary">
                                             <i className="fas fa-search"></i> Tìm
                                         </button>
+                                        {searchError && (
+                                            <div className="text-danger mt-2 w-100">{searchError}</div>
+                                        )}
                                     </form>
                                 </div>
                                 <div className="col-md-3 text-right">

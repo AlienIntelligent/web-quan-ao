@@ -10,6 +10,9 @@ namespace BaseCore.Services
 {
     public class OrderService : IOrderService
     {
+        public const decimal DefaultShippingFee = 30000m;
+        public const decimal VatRate = 0.08m;
+
         private readonly IRepository<Order> _orderRepository;
         private readonly IRepository<OrderDetail> _orderDetailRepository;
         private readonly IRepository<Product> _productRepository;
@@ -48,11 +51,23 @@ namespace BaseCore.Services
             string userId, 
             List<(int ProductId, int? VariantId, int Quantity)> items, 
             string shippingAddress, 
-            decimal shippingFee,
             string? promotionCode = null,
             string? paymentMethod = null,
             string? note = null)
         {
+            if (items == null || items.Count == 0)
+                throw new InvalidOperationException("Đơn hàng phải có ít nhất một sản phẩm.");
+            if (string.IsNullOrWhiteSpace(shippingAddress))
+                throw new InvalidOperationException("Vui lòng nhập địa chỉ giao hàng.");
+            if (items.Any(item => item.Quantity <= 0))
+                throw new InvalidOperationException("Số lượng sản phẩm phải lớn hơn 0.");
+
+            var normalizedPaymentMethod = (paymentMethod ?? "COD").Trim().ToUpperInvariant();
+            if (normalizedPaymentMethod != "COD")
+                throw new InvalidOperationException("Hiện tại hệ thống chỉ hỗ trợ thanh toán khi nhận hàng (COD).");
+
+            var shippingFee = DefaultShippingFee;
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -104,9 +119,10 @@ namespace BaseCore.Services
                     promotionResult = await _promotionService.ApplyPromotionAsync(promotionCode, subtotal, shippingFee);
                 }
 
-                var totalAmount = subtotal + shippingFee;
+                var taxAmount = Math.Round(subtotal * VatRate, 0, MidpointRounding.AwayFromZero);
+                var totalAmount = subtotal + shippingFee + taxAmount;
                 var discountAmount = promotionResult?.DiscountAmount ?? 0;
-                var finalAmount = promotionResult?.FinalTotal ?? (totalAmount - discountAmount);
+                var finalAmount = Math.Max(0, totalAmount - discountAmount);
 
                 var order = new Order
                 {
@@ -118,8 +134,8 @@ namespace BaseCore.Services
                     FinalAmount = finalAmount,
                     ShippingFee = shippingFee,
                     Status = "PENDING",
-                    PaymentMethod = paymentMethod ?? "COD",
-                    PaymentStatus = "Pending",
+                    PaymentMethod = normalizedPaymentMethod,
+                    PaymentStatus = "PENDING",
                     ShippingAddress = shippingAddress,
                     Note = note
                 };
@@ -170,7 +186,7 @@ namespace BaseCore.Services
             }
 
             var items = cart.Items.Select(i => (i.ProductId, (int?)null, i.Quantity)).ToList();
-            var order = await CreateOrderAsync(userId, items, shippingAddress, 30000); // Default shipping fee
+            var order = await CreateOrderAsync(userId, items, shippingAddress);
             
             await _cartService.ClearCartAsync(userId);
             return order;

@@ -25,7 +25,6 @@ const Checkout = () => {
     note: "",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [submitting, setSubmitting] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -191,9 +190,8 @@ const Checkout = () => {
     try {
       await orderApi.create({
         shippingAddress,
-        shippingFee: shipping,
         promotionCode: appliedCoupon?.code || null,
-        paymentMethod: paymentMethod === "cod" ? "COD" : "BANK_TRANSFER",
+        paymentMethod: "COD",
         note: formData.note,
         items: currentCartItems.map((x) => ({
           productId: x.productId,
@@ -205,9 +203,8 @@ const Checkout = () => {
       // Chỉ xóa những sản phẩm đã mua khỏi giỏ hàng chính
       cartItems.forEach(item => {
           const items = cartStorage.getItems().filter(x => !(x.productId === item.productId && (x.variantId || 0) === (item.variantId || 0)));
-          localStorage.setItem('fashi_cart', JSON.stringify(items));
+          cartStorage.setItems(items);
       });
-      window.dispatchEvent(new Event('fashi-cart-updated'));
       
       checkoutStorage.clear();
       couponStorage.clear();
@@ -349,31 +346,11 @@ const Checkout = () => {
                       {couponError && <p className="text-danger mt-2 mb-0">{couponError}</p>}
                     </div>
                     <div className="payment-check">
-                      <div className="pc-item">
-                        <label htmlFor="pm-cod">
-                          Thanh toán khi nhận hàng
-                          <input
-                            id="pm-cod"
-                            type="radio"
-                            value="cod"
-                            checked={paymentMethod === "cod"}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                          />
-                          <span className="checkmark"></span>
-                        </label>
-                      </div>
-                      <div className="pc-item">
-                        <label htmlFor="pm-bank">
-                          Chuyển khoản ngân hàng
-                          <input
-                            id="pm-bank"
-                            type="radio"
-                            value="bank-transfer"
-                            checked={paymentMethod === "bank-transfer"}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                          />
-                          <span className="checkmark"></span>
-                        </label>
+                      <div className="alert alert-light border">
+                        <strong>Thanh toán khi nhận hàng (COD)</strong>
+                        <div className="small text-muted mt-1">
+                          Chuyển khoản sẽ được mở khi hệ thống tích hợp cổng thanh toán và xác nhận giao dịch tự động.
+                        </div>
                       </div>
                     </div>
                     <div className="order-btn">

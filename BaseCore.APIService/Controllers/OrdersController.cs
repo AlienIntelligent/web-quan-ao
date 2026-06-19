@@ -151,6 +151,10 @@ namespace BaseCore.APIService.Controllers
             var order = await _orderRepository.GetWithDetailsAsync(id);
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng" });
 
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!User.IsInRole("Admin") && order.UserId != currentUserId)
+                return Forbid();
+
             // Trả về cấu trúc mà Frontend mong đợi (payload.order và payload.details)
             return Ok(new 
             { 
@@ -177,7 +181,6 @@ namespace BaseCore.APIService.Controllers
                     userId, 
                     items, 
                     dto.ShippingAddress ?? "", 
-                    dto.ShippingFee,
                     dto.PromotionCode,
                     dto.PaymentMethod,
                     dto.Note);
@@ -253,7 +256,6 @@ namespace BaseCore.APIService.Controllers
         public List<OrderItemDto> Items { get; set; } = new();
         public string? ShippingAddress { get; set; }
         public string? PromotionCode { get; set; }
-        public decimal ShippingFee { get; set; }
         public string? PaymentMethod { get; set; }
         public string? Note { get; set; }
     }

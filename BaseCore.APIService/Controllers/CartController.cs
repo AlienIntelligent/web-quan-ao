@@ -25,7 +25,12 @@ namespace BaseCore.APIService.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             var cart = await _cartService.GetCartWithDetailsAsync(userId);
-            return Ok(cart);
+            return Ok(new
+            {
+                items = cart.Items,
+                total = cart.Total,
+                itemCount = cart.ItemCount
+            });
         }
 
         [HttpPost("add")]
@@ -88,6 +93,26 @@ namespace BaseCore.APIService.Controllers
             await _cartService.ClearCartAsync(userId);
             return Ok(new { message = "Cart cleared" });
         }
+
+        [HttpPut("sync")]
+        public async Task<IActionResult> SyncCart([FromBody] SyncCartDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            try
+            {
+                var items = (dto.Items ?? new List<SyncCartItemDto>())
+                    .Select(item => (item.ProductId, item.VariantId, item.Quantity))
+                    .ToList();
+                var syncedItems = await _cartService.ReplaceCartAsync(userId, items);
+                return Ok(syncedItems);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
     public class AddToCartDto
@@ -99,6 +124,18 @@ namespace BaseCore.APIService.Controllers
     }
 
     public class UpdateCartItemDto
+    {
+        public int ProductId { get; set; }
+        public int? VariantId { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    public class SyncCartDto
+    {
+        public List<SyncCartItemDto>? Items { get; set; }
+    }
+
+    public class SyncCartItemDto
     {
         public int ProductId { get; set; }
         public int? VariantId { get; set; }

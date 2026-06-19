@@ -21,7 +21,7 @@ namespace BaseCore.APIService.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll(
             [FromQuery] string keyword = "",
             [FromQuery] bool? isActive = null,
@@ -31,6 +31,9 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
+            if (!User.IsInRole("Admin"))
+                isActive = true;
+
             var (promotions, totalCount) = await _promotionService.SearchAsync(
                 string.IsNullOrWhiteSpace(keyword) ? null : keyword,
                 isActive,

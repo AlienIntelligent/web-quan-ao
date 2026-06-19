@@ -193,11 +193,11 @@ function AppRoutes() {
       <Route path="/product/:id" element={<Product />} />
       <Route path="/shopping-cart" element={<ShoppingCart />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/check-out" element={<Checkout />} />
-      <Route path="/my-orders" element={<MyOrders />} />
-      <Route path="/orders/:id/tracking" element={<OrderTracking />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/wishlist" element={<Wishlist />} />
+      <Route path="/check-out" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+      <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+      <Route path="/orders/:id/tracking" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
 
       {/* 404 - Route không tìm thấy */}
       <Route path="*" element={<Navigate to="/home" replace />} />

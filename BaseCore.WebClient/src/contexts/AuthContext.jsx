@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { authApi } from "../services/api";
+import { authApi, cartStorage } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -23,6 +23,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.getItem("token") || sessionStorage.getItem("token");
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
+      cartStorage.syncWithServer().catch((error) => {
+        console.error("Không thể đồng bộ giỏ hàng", error);
+      });
     }
     setLoading(false);
   }, []);
@@ -47,6 +50,11 @@ export const AuthProvider = ({ children }) => {
 
       // Lưu user vào state (phiên session)
       setUser(userData);
+      try {
+        await cartStorage.syncWithServer();
+      } catch (cartError) {
+        console.error("Không thể đồng bộ giỏ hàng sau đăng nhập", cartError);
+      }
 
       return { success: true, user: userData };
     } catch (error) {
@@ -61,6 +69,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
+    cartStorage.clearLocal();
     // Xóa state (session hiện tại)
     setUser(null);
   };

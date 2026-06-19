@@ -60,9 +60,9 @@ namespace BaseCore.Services
             await _productRepository.DeleteByIdAsync(id);
         }
 
-        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, decimal? minPrice, decimal? maxPrice, int? sizeId, int? colorId, int page, int pageSize)
+        public async Task<(List<Product> Products, int TotalCount)> SearchAsync(string keyword, int? categoryId, decimal? minPrice, decimal? maxPrice, int? sizeId, int? colorId, string? sortBy, int page, int pageSize)
         {
-            return await _productRepository.SearchAsync(keyword, categoryId, minPrice, maxPrice, sizeId, colorId, page, pageSize);
+            return await _productRepository.SearchAsync(keyword, categoryId, minPrice, maxPrice, sizeId, colorId, sortBy, page, pageSize);
         }
     }
 }

@@ -59,6 +59,10 @@ namespace BaseCore.AuthService.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!User.IsInRole("Admin") && currentUserId != id)
+                return Forbid();
+
             var user = await _userService.GetById(id);
             if (user == null)
             {

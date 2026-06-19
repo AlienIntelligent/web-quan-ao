@@ -10,7 +10,6 @@ namespace BaseCore.Services
             string userId, 
             List<(int ProductId, int? VariantId, int Quantity)> items, 
             string shippingAddress, 
-            decimal shippingFee,
             string? promotionCode = null,
             string? paymentMethod = null,
             string? note = null);

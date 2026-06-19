@@ -298,7 +298,7 @@ const Home = () => {
                               className="sold-count text-muted"
                               style={{ fontSize: "10px" }}
                             >
-                              Đã bán {Math.floor(Math.random() * 100)}+
+                              Đã bán {product.soldCount || 0}
                             </div>
                           </div>
                         </div>
@@ -431,7 +431,7 @@ const Home = () => {
                               className="sold-count text-muted"
                               style={{ fontSize: "10px" }}
                             >
-                              Đã bán {Math.floor(Math.random() * 100)}+
+                              Đã bán {product.soldCount || 0}
                             </div>
                           </div>
                         </div>
