@@ -2,8 +2,15 @@
    reference BaseCore.WebClient while isolating public-shop template styles. */
 body {
   background: #f4f6f9 !important;
-  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-family:
+    "Source Sans Pro",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif !important;
 }
 
 .wrapper {
@@ -155,7 +162,9 @@ body {
 .card {
   border: 0 solid rgba(0, 0, 0, 0.125) !important;
   border-radius: 0.25rem !important;
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.125), 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  box-shadow:
+    0 0 1px rgba(0, 0, 0, 0.125),
+    0 1px 3px rgba(0, 0, 0, 0.2) !important;
   margin-bottom: 1rem !important;
 }
 
@@ -183,7 +192,9 @@ body {
 
 .small-box {
   border-radius: 0.25rem !important;
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.125), 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  box-shadow:
+    0 0 1px rgba(0, 0, 0, 0.125),
+    0 1px 3px rgba(0, 0, 0, 0.2) !important;
   margin-bottom: 20px !important;
   overflow: hidden;
 }
@@ -388,4 +399,43 @@ body {
 
 .status-select {
   min-width: 130px;
+}
+
+/* Product config modal tabs */
+.product-config-tabs {
+  background: #ffffff !important;
+  border-bottom: 2px solid #000000 !important;
+}
+
+.product-config-tabs .nav-item {
+  margin-bottom: -1px;
+}
+
+.product-config-tabs .nav-link.product-config-tab {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #000000 !important;
+  border-radius: 0.25rem 0.25rem 0 0 !important;
+  padding: 0.75rem 1.25rem !important;
+}
+
+.product-config-tabs .nav-link.product-config-tab i {
+  color: inherit !important;
+}
+
+.product-config-tabs .nav-link.product-config-tab.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff #ffffff #ffffff !important;
+  border: 1px solid #000000 !important;
+  border-radius: 0rem 0rem 0 0 !;
+  -webkit-border-radius: 0rem 0rem 0 0 !;
+  -moz-border-radius: 0rem 0rem 0 0 !;
+  -ms-border-radius: 0rem 0rem 0 0 !;
+  -o-border-radius: 0rem 0rem 0 0 !;
+}
+
+.product-config-tabs .nav-link.product-config-tab:hover:not(.active) {
+  background: #000000 !important;
+  color: #ffffff !important;
 }

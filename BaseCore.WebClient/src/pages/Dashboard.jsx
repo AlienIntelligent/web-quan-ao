@@ -31,8 +31,8 @@ const Dashboard = () => {
   const [stats, setStats] = useState(defaultStats);
   const [revenueRows, setRevenueRows] = useState([]);
   const [revenueMode, setRevenueMode] = useState("day");
-  const [revenueStart, setRevenueStart] = useState("");
-  const [revenueEnd, setRevenueEnd] = useState("");
+  const [revenueStart, setRevenueStart] = useState("today");
+  const [revenueEnd, setRevenueEnd] = useState("today");
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -10,7 +10,12 @@ import {
 } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
-const ImageDropzone = ({ value, onChange, folder = "products", compact = false }) => {
+const ImageDropzone = ({
+  value,
+  onChange,
+  folder = "products",
+  compact = false,
+}) => {
   const [uploading, setUploading] = useState(false);
 
   const uploadFile = async (file) => {
@@ -60,7 +65,9 @@ const ImageDropzone = ({ value, onChange, folder = "products", compact = false }
             }}
           />
         ) : (
-          <div className="text-muted">{compact ? "Kéo thả" : "Kéo thả ảnh vào đây"}</div>
+          <div className="text-muted">
+            {compact ? "Kéo thả" : "Kéo thả ảnh vào đây"}
+          </div>
         )}
       </div>
 
@@ -75,7 +82,9 @@ const ImageDropzone = ({ value, onChange, folder = "products", compact = false }
         <small className="text-muted d-block mt-1">Đang upload ảnh...</small>
       )}
 
-      {value && !compact && <small className="text-muted d-block mt-1">{value}</small>}
+      {value && !compact && (
+        <small className="text-muted d-block mt-1">{value}</small>
+      )}
     </div>
   );
 };
@@ -169,7 +178,11 @@ const Products = () => {
         metadataApi.getColors(),
       ]);
 
-      setAllSizes((sizesRes.data || []).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
+      setAllSizes(
+        (sizesRes.data || []).sort(
+          (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+        ),
+      );
       setAllColors(colorsRes.data || []);
     } catch (e) {
       console.error("Khong the tai size/mau:", e);
@@ -339,7 +352,12 @@ const Products = () => {
       return;
     }
 
-    if (!Number.isFinite(stock) || !Number.isFinite(price) || stock < 0 || price < 0) {
+    if (
+      !Number.isFinite(stock) ||
+      !Number.isFinite(price) ||
+      stock < 0 ||
+      price < 0
+    ) {
       setVariantFormError("Kho và giá phải là số không âm");
       return;
     }
@@ -672,10 +690,10 @@ const Products = () => {
               </div>
 
               {/* TABS Navigation */}
-              <ul className="nav nav-tabs px-3 bg-light pt-2">
+              <ul className="nav nav-tabs px-3 product-config-tabs pt-2">
                 <li className="nav-item">
                   <button
-                    className={`nav-link ${activeTab === "general" ? "active font-weight-bold" : ""}`}
+                    className={`nav-link product-config-tabs ${activeTab === "general" ? "active font-weight-bold" : ""}`}
                     onClick={() => setActiveTab("general")}
                   >
                     <i className="fas fa-info-circle mr-1"></i> Thông tin chung
@@ -685,7 +703,7 @@ const Products = () => {
                   <>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${activeTab === "variants" ? "active font-weight-bold" : ""}`}
+                        className={`nav-link product-config-tabs ${activeTab === "variants" ? "active font-weight-bold" : ""}`}
                         onClick={() => setActiveTab("variants")}
                       >
                         <i className="fas fa-layer-group mr-1"></i> Biến thể
@@ -694,7 +712,7 @@ const Products = () => {
                     </li>
                     <li className="nav-item">
                       <button
-                        className={`nav-link ${activeTab === "origins" ? "active font-weight-bold" : ""}`}
+                        className={`nav-link product-config-tabs ${activeTab === "origins" ? "active font-weight-bold" : ""}`}
                         onClick={() => setActiveTab("origins")}
                       >
                         <i className="fas fa-globe mr-1"></i> Xuất xứ
@@ -917,7 +935,11 @@ const Products = () => {
                             type="text"
                             className="form-control"
                             value={variantForm.color}
-                            list={allColors.length > 0 ? "variant-color-options" : undefined}
+                            list={
+                              allColors.length > 0
+                                ? "variant-color-options"
+                                : undefined
+                            }
                             onChange={(e) =>
                               setVariantForm({
                                 ...variantForm,

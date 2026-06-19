@@ -8,7 +8,7 @@ namespace BaseCore.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Should ideally be Admin only
+    [Authorize(Roles = "Admin")] // Should ideally be Admin only
     public class AnalyticsController : ControllerBase
     {
         private readonly IAnalyticsService _analyticsService;

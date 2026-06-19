@@ -127,7 +127,7 @@ namespace BaseCore.APIService.Controllers
         /// Create new product (requires authentication)
         /// </summary>
         [HttpPost]
-        [Authorize]
+        [Authorize (Roles = "Admin")] // Chỉ admin mới được tạo sản phẩm mới
         public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
         {
             // Validate category exists
@@ -158,7 +158,7 @@ namespace BaseCore.APIService.Controllers
         /// Update product (requires authentication)
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateDto dto)
         {
             var product = await _productRepository.GetByIdAsync(id);
@@ -186,7 +186,7 @@ namespace BaseCore.APIService.Controllers
         /// Delete product (requires authentication)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _productRepository.GetByIdAsync(id);
