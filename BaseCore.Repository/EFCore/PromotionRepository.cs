@@ -31,6 +31,7 @@ namespace BaseCore.Repository.EFCore
         public async Task<Promotion?> GetByCodeAsync(string code)
         {
             return await _dbSet
+                .Include(p => p.PromotionProducts)
                 .FirstOrDefaultAsync(p => p.Code.ToLower() == code.ToLower());
         }
 
@@ -56,6 +57,7 @@ namespace BaseCore.Repository.EFCore
             return await _dbSet
                 .Include(p => p.PromotionProducts)
                 .ThenInclude(pp => pp.Product)
+                .ThenInclude(product => product.Category)
                 .FirstOrDefaultAsync(p => p.Id == promotionId);
         }
 
@@ -68,7 +70,9 @@ namespace BaseCore.Repository.EFCore
             int page,
             int pageSize)
         {
-            var query = _dbSet.AsQueryable();
+            var query = _dbSet
+                .Include(p => p.PromotionProducts)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
             {

@@ -47,7 +47,7 @@ namespace BaseCore.APIService.Controllers
         /// Create new category
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize (Roles = "Admin")] // Chỉ admin mới được tạo category mới
         public async Task<IActionResult> Create([FromBody] CategoryDto dto)
         {
             var existing = await _categoryRepository.GetByNameAsync(dto.Name);

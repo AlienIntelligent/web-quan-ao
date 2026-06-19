@@ -45,6 +45,14 @@ const Checkout = () => {
     }
   }, []);
   const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), [cartItems]);
+  const promotionLines = useMemo(
+    () =>
+      cartItems.map((item) => ({
+        productId: item.productId,
+        subtotal: item.price * item.quantity,
+      })),
+    [cartItems],
+  );
   const shipping = cartItems.length ? 30000 : 0;
   const vat = Math.round(subtotal * 0.08);
   const discount = appliedCoupon?.discountAmount || 0;
@@ -83,6 +91,7 @@ const Checkout = () => {
         code: savedCoupon.code,
         orderSubtotal: subtotal,
         shippingFee: shipping,
+        lines: promotionLines,
       })
       .then((res) => {
         if (cancelled) return;
@@ -99,7 +108,7 @@ const Checkout = () => {
     return () => {
       cancelled = true;
     };
-  }, [subtotal, shipping, cartItems.length]);
+  }, [subtotal, shipping, cartItems.length, promotionLines]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,6 +130,7 @@ const Checkout = () => {
         code,
         orderSubtotal: subtotal,
         shippingFee: shipping,
+        lines: promotionLines,
       });
       setAppliedCoupon(response.data);
       couponStorage.set(response.data);

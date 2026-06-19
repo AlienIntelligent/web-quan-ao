@@ -46,9 +46,6 @@ const MainLayout = ({ children }) => {
                 {user?.email}
               </span>
               <div className="dropdown-divider"></div>
-              <Link to="/home" className="dropdown-item">
-                <i className="fas fa-store mr-2"></i> Xem cửa hàng
-              </Link>
               <button className="dropdown-item" onClick={handleLogout}>
                 <i className="fas fa-sign-out-alt mr-2"></i> Đăng xuất
               </button>

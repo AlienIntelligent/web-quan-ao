@@ -41,6 +41,14 @@ const ShoppingCart = () => {
     () => selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [selectedItems],
   );
+  const promotionLines = useMemo(
+    () =>
+      selectedItems.map((item) => ({
+        productId: item.productId,
+        subtotal: item.price * item.quantity,
+      })),
+    [selectedItems],
+  );
 
   const shipping = selectedItems.length ? 30000 : 0;
   const vat = Math.round(subtotal * 0.08); // VAT 8% theo quy định hiện hành
@@ -66,6 +74,7 @@ const ShoppingCart = () => {
         code: savedCoupon.code,
         orderSubtotal: subtotal,
         shippingFee: shipping,
+        lines: promotionLines,
       })
       .then((res) => {
         if (cancelled) return;
@@ -82,7 +91,7 @@ const ShoppingCart = () => {
     return () => {
       cancelled = true;
     };
-  }, [subtotal, shipping, cartItems.length]);
+  }, [subtotal, shipping, cartItems.length, promotionLines]);
 
   const updateQuantity = (productId, variantId, nextQty) => {
     const items = cartStorage.getItems().map((x) =>
@@ -130,6 +139,7 @@ const ShoppingCart = () => {
         code,
         orderSubtotal: subtotal,
         shippingFee: shipping,
+        lines: promotionLines,
       });
       setAppliedCoupon(response.data);
       couponStorage.set(response.data);
@@ -162,6 +172,7 @@ const ShoppingCart = () => {
         code: promo.code,
         orderSubtotal: subtotal,
         shippingFee: shipping,
+        lines: promotionLines,
       });
       setAppliedCoupon(response.data);
       couponStorage.set(response.data);

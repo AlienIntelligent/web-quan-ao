@@ -143,7 +143,7 @@ namespace BaseCore.APIService.Controllers
         /// Create new product (requires authentication)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize (Roles = "Admin")] // Chỉ admin mới được tạo sản phẩm mới
         public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
         {
             // Validate category exists

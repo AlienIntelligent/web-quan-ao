@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BaseCore.Entities;
+using BaseCore.Repository;
 using BaseCore.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace BaseCore.APIService.Controllers
 {
@@ -14,10 +16,12 @@ namespace BaseCore.APIService.Controllers
     public class PromotionsController : ControllerBase
     {
         private readonly IPromotionService _promotionService;
+        private readonly AppDbContext _context;
 
-        public PromotionsController(IPromotionService promotionService)
+        public PromotionsController(IPromotionService promotionService, AppDbContext context)
         {
             _promotionService = promotionService;
+            _context = context;
         }
 
         [HttpGet]
@@ -78,7 +82,12 @@ namespace BaseCore.APIService.Controllers
                 var result = await _promotionService.ApplyPromotionAsync(
                     dto.Code,
                     dto.OrderSubtotal,
-                    dto.ShippingFee);
+                    dto.ShippingFee,
+                    dto.Lines?.Select(line => new PromotionLine
+                    {
+                        ProductId = line.ProductId,
+                        Subtotal = line.Subtotal
+                    }));
 
                 return Ok(new PromotionValidationResultDto
                 {
@@ -89,6 +98,8 @@ namespace BaseCore.APIService.Controllers
                     DiscountValue = result.Promotion.DiscountValue,
                     DiscountAmount = result.DiscountAmount,
                     FinalTotal = result.FinalTotal,
+                    EligibleSubtotal = result.EligibleSubtotal,
+                    HasProductScope = result.HasProductScope,
                     Message = result.Message
                 });
             }
@@ -164,6 +175,77 @@ namespace BaseCore.APIService.Controllers
             }
         }
 
+        [HttpGet("{id}/products")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetProducts([FromRoute] int id)
+        {
+            var promotion = await _promotionService.GetPromotionWithProductsAsync(id);
+            if (promotion == null)
+                return NotFound(new { message = "Promotion not found" });
+
+            var products = promotion.PromotionProducts
+                .OrderBy(pp => pp.Product.Name)
+                .Select(pp => new PromotionProductDto
+                {
+                    Id = pp.Id,
+                    ProductId = pp.ProductId,
+                    ProductName = pp.Product.Name,
+                    Price = pp.Product.Price,
+                    ImageUrl = pp.Product.ImageUrl,
+                    CategoryName = pp.Product.Category != null ? pp.Product.Category.Name : null
+                })
+                .ToList();
+
+            return Ok(new
+            {
+                promotionId = id,
+                productIds = products.Select(p => p.ProductId).ToList(),
+                products
+            });
+        }
+
+        [HttpPut("{id}/products")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateProducts([FromRoute] int id, [FromBody] PromotionProductsUpdateDto dto)
+        {
+            var promotion = await _context.Promotions
+                .Include(p => p.PromotionProducts)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (promotion == null)
+                return NotFound(new { message = "Promotion not found" });
+
+            var productIds = (dto?.ProductIds ?? Array.Empty<int>())
+                .Where(productId => productId > 0)
+                .Distinct()
+                .ToList();
+
+            if (productIds.Count > 0)
+            {
+                var validProductIds = await _context.Products
+                    .Where(p => productIds.Contains(p.Id))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var missingIds = productIds.Except(validProductIds).ToList();
+                if (missingIds.Count > 0)
+                    return BadRequest(new { message = $"Product not found: {string.Join(", ", missingIds)}" });
+            }
+
+            _context.PromotionProducts.RemoveRange(promotion.PromotionProducts);
+            foreach (var productId in productIds)
+            {
+                _context.PromotionProducts.Add(new PromotionProduct
+                {
+                    PromotionId = id,
+                    ProductId = productId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return await GetProducts(id);
+        }
+
         private static PromotionDto ToDto(Promotion p)
         {
             return new PromotionDto
@@ -181,7 +263,8 @@ namespace BaseCore.APIService.Controllers
                 UsageLimit = p.UsageLimit,
                 UsedCount = p.UsedCount,
                 IsActive = p.IsActive,
-                CreatedAt = p.CreatedAt
+                CreatedAt = p.CreatedAt,
+                ProductScopeCount = p.PromotionProducts?.Count ?? 0
             };
         }
 
@@ -201,6 +284,7 @@ namespace BaseCore.APIService.Controllers
             public int UsedCount { get; set; }
             public bool IsActive { get; set; }
             public DateTime CreatedAt { get; set; }
+            public int ProductScopeCount { get; set; }
         }
 
         public class PromotionCreateDto
@@ -238,6 +322,13 @@ namespace BaseCore.APIService.Controllers
             public string Code { get; set; } = "";
             public decimal OrderSubtotal { get; set; }
             public decimal ShippingFee { get; set; }
+            public List<PromotionLineDto>? Lines { get; set; }
+        }
+
+        public class PromotionLineDto
+        {
+            public int ProductId { get; set; }
+            public decimal Subtotal { get; set; }
         }
 
         public class PromotionValidationResultDto
@@ -249,7 +340,24 @@ namespace BaseCore.APIService.Controllers
             public decimal DiscountValue { get; set; }
             public decimal DiscountAmount { get; set; }
             public decimal FinalTotal { get; set; }
+            public decimal EligibleSubtotal { get; set; }
+            public bool HasProductScope { get; set; }
             public string Message { get; set; } = "";
+        }
+
+        public class PromotionProductDto
+        {
+            public int Id { get; set; }
+            public int ProductId { get; set; }
+            public string ProductName { get; set; } = "";
+            public decimal Price { get; set; }
+            public string ImageUrl { get; set; } = "";
+            public string? CategoryName { get; set; }
+        }
+
+        public class PromotionProductsUpdateDto
+        {
+            public int[] ProductIds { get; set; } = Array.Empty<int>();
         }
     }
 }

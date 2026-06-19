@@ -8,7 +8,7 @@ namespace BaseCore.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Should ideally be Admin only
+    [Authorize(Roles = "Admin")] // Should ideally be Admin only
     public class AnalyticsController : ControllerBase
     {
         private readonly IAnalyticsService _analyticsService;
@@ -26,11 +26,22 @@ namespace BaseCore.APIService.Controllers
         }
 
         [HttpGet("revenue")]
-        public async Task<IActionResult> GetRevenue([FromQuery] DateTime? start, [FromQuery] DateTime? end)
+        public async Task<IActionResult> GetRevenue(
+            [FromQuery] DateTime? start,
+            [FromQuery] DateTime? end,
+            [FromQuery] string groupBy = "day")
         {
+            var mode = string.IsNullOrWhiteSpace(groupBy)
+                ? "day"
+                : groupBy.Trim().ToLower();
+
+            if (mode is not ("day" or "month" or "year"))
+                return BadRequest(new { message = "groupBy must be day, month, or year" });
+
             var startDate = start ?? DateTime.Now.AddDays(-30);
             var endDate = end ?? DateTime.Now;
-            var report = await _analyticsService.GetRevenueReportAsync(startDate, endDate);
+
+            var report = await _analyticsService.GetRevenueReportAsync(startDate, endDate, mode);
             return Ok(report);
         }
 

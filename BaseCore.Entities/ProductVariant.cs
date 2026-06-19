@@ -27,5 +27,7 @@ public partial class ProductVariant
     public virtual Color? ColorNavigation { get; set; }
 
     public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+
+    public virtual ICollection<ProductVariantImage> ProductVariantImages { get; set; } = new List<ProductVariantImage>();
 }
 

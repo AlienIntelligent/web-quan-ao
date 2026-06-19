@@ -203,19 +203,71 @@ const OrdersAdmin = () => {
     }
   };
 
-  const renderPagination = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(
-        <li key={i} className={`page-item ${page === i ? "active" : ""}`}>
-          <button className="page-link" onClick={() => setPage(i)}>
-            {i}
-          </button>
-        </li>,
-      );
+  const goToPage = (nextPage) => {
+    const pageCount = Math.max(Number(totalPages) || 1, 1);
+    const safePage = Math.min(Math.max(nextPage, 1), pageCount);
+    if (safePage !== page) {
+      setPage(safePage);
     }
-    return pages;
   };
+
+  const getPaginationRange = () => {
+    const pageCount = Math.max(Number(totalPages) || 1, 1);
+
+    if (pageCount <= 9) {
+      return Array.from({ length: pageCount }, (_, index) => index + 1);
+    }
+
+    const visiblePages = new Set([1, pageCount]);
+    const currentPage = Math.min(Math.max(page, 1), pageCount);
+
+    for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+      if (i > 1 && i < pageCount) {
+        visiblePages.add(i);
+      }
+    }
+
+    if (currentPage <= 4) {
+      for (let i = 2; i <= 6; i++) {
+        visiblePages.add(i);
+      }
+    }
+
+    if (currentPage >= pageCount - 3) {
+      for (let i = pageCount - 5; i < pageCount; i++) {
+        visiblePages.add(i);
+      }
+    }
+
+    const sortedPages = Array.from(visiblePages).sort((a, b) => a - b);
+    return sortedPages.reduce((range, pageNumber, index) => {
+      const previousPage = sortedPages[index - 1];
+      if (index > 0 && pageNumber - previousPage > 1) {
+        range.push("ellipsis");
+      }
+      range.push(pageNumber);
+      return range;
+    }, []);
+  };
+
+  const renderPagination = () =>
+    getPaginationRange().map((item, index) => {
+      if (item === "ellipsis") {
+        return (
+          <li key={`ellipsis-${index}`} className="page-item disabled">
+            <span className="page-link">...</span>
+          </li>
+        );
+      }
+
+      return (
+        <li key={item} className={`page-item ${page === item ? "active" : ""}`}>
+          <button className="page-link" onClick={() => goToPage(item)}>
+            {item}
+          </button>
+        </li>
+      );
+    });
 
   const formatMoney = (v) => Number(v || 0).toLocaleString("vi-VN") + " đ";
 
@@ -278,14 +330,24 @@ const OrdersAdmin = () => {
                 </div>
               </div>
             </div>
-            <div className="card-body">
+            <div className="card-body p-0">
               {loading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary"></div>
                 </div>
               ) : (
                 <>
-                  <table className="table table-bordered table-striped">
+                  <table className="table table-bordered table-striped table-hover table-valign-middle mb-0 admin-orders-table">
+                    <colgroup>
+                      <col style={{ width: "80px" }} />
+                      <col style={{ width: "260px" }} />
+                      <col style={{ width: "115px" }} />
+                      <col style={{ width: "150px" }} />
+                      <col style={{ width: "135px" }} />
+                      <col style={{ width: "140px" }} />
+                      <col style={{ width: "125px" }} />
+                      <col style={{ width: "120px" }} />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>Mã đơn</th>
@@ -295,7 +357,7 @@ const OrdersAdmin = () => {
                         <th>TT thanh toán</th>
                         <th>Thành tiền</th>
                         <th>Trạng thái</th>
-                        <th style={{ width: "200px" }}>Thao tác</th>
+                        <th>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -306,30 +368,28 @@ const OrdersAdmin = () => {
                           </td>
                         </tr>
                       ) : (
-                        items.map((order) => {
-                          const isOrderManaged =
-                            ORDER_MANAGED_STATUS_VALUES.has(order.status);
-
-                          return (
+                        items.map((order) => (
                             <tr key={order.id}>
-                              <td>
+                              <td className="text-nowrap">
                                 <strong>#{order.id}</strong>
                               </td>
-                              <td>
-                                <div>{getCustomerName(order)}</div>
-                                <small className="text-muted">
+                              <td className="order-customer-cell">
+                                <div className="text-truncate">
+                                  {getCustomerName(order)}
+                                </div>
+                                <small className="text-muted d-block text-truncate">
                                   {order.shippingAddress?.substring(0, 25)}...
                                 </small>
                               </td>
-                              <td>
+                              <td className="text-nowrap">
                                 {new Date(order.orderDate).toLocaleDateString(
                                   "vi-VN",
                                 )}
                               </td>
-                              <td>
+                              <td className="text-nowrap">
                                 <small>{order.paymentMethod}</small>
                               </td>
-                              <td>
+                              <td className="text-nowrap">
                                 <span
                                   className={`badge ${order.paymentStatus === "PAID" ? "badge-success" : "badge-warning"}`}
                                 >
@@ -338,12 +398,12 @@ const OrdersAdmin = () => {
                                     : "Chưa TT"}
                                 </span>
                               </td>
-                              <td>
+                              <td className="text-nowrap">
                                 <strong className="text-danger">
                                   {formatMoney(order.finalAmount)}
                                 </strong>
                               </td>
-                              <td>
+                              <td className="text-nowrap">
                                 <span
                                   className={`badge ${STATUS_BADGE[order.status] || "badge-secondary"}`}
                                 >
@@ -352,11 +412,12 @@ const OrdersAdmin = () => {
                                   )?.label || order.status}
                                 </span>
                               </td>
-                              <td className="d-flex align-items-center">
+                              <td className="order-action-cell">
                                 <button
                                   className="btn btn-sm btn-info mr-1"
                                   onClick={() => viewDetails(order)}
                                   title="Xem chi tiết"
+                                  aria-label={`Xem chi tiet don hang ${order.id}`}
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
@@ -365,28 +426,29 @@ const OrdersAdmin = () => {
                                     className="btn btn-sm btn-success mr-1"
                                     onClick={() => openShippingModal(order)}
                                     title="Tạo vận chuyển"
+                                    aria-label={`Tao van chuyen cho don hang ${order.id}`}
                                   >
                                     <i className="fas fa-truck"></i>
                                   </button>
                                 )}
                               </td>
                             </tr>
-                          );
-                        })
+                        ))
                       )}
                     </tbody>
                   </table>
 
-                  <div className="d-flex justify-content-between align-items-center">
+                  <div className="admin-table-footer d-flex justify-content-between align-items-center mt-3 mx-2 pb-3">
                     <span>Tổng: {totalCount} đơn hàng</span>
-                    <nav>
+                    <nav aria-label="Phan trang don hang">
                       <ul className="pagination mb-0">
                         <li
                           className={`page-item ${page === 1 ? "disabled" : ""}`}
                         >
                           <button
                             className="page-link"
-                            onClick={() => setPage(page - 1)}
+                            onClick={() => goToPage(page - 1)}
+                            disabled={page === 1}
                           >
                             Trước
                           </button>
@@ -397,7 +459,8 @@ const OrdersAdmin = () => {
                         >
                           <button
                             className="page-link"
-                            onClick={() => setPage(page + 1)}
+                            onClick={() => goToPage(page + 1)}
+                            disabled={page === totalPages}
                           >
                             Sau
                           </button>

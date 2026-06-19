@@ -116,7 +116,19 @@ namespace BaseCore.Services
                 PromotionApplicationResult? promotionResult = null;
                 if (!string.IsNullOrWhiteSpace(promotionCode))
                 {
-                    promotionResult = await _promotionService.ApplyPromotionAsync(promotionCode, subtotal, shippingFee);
+                    var promotionLines = orderDetails
+                        .Select(detail => new PromotionLine
+                        {
+                            ProductId = detail.ProductId,
+                            Subtotal = detail.UnitPrice * detail.Quantity
+                        })
+                        .ToList();
+
+                    promotionResult = await _promotionService.ApplyPromotionAsync(
+                        promotionCode,
+                        subtotal,
+                        shippingFee,
+                        promotionLines);
                 }
 
                 var taxAmount = Math.Round(subtotal * VatRate, 0, MidpointRounding.AwayFromZero);

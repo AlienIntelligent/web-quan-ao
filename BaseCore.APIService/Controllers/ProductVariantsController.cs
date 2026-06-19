@@ -49,13 +49,22 @@ public class ProductVariantsController : ControllerBase
             {
                 v.Id,
                 v.ProductId,
-                Size = v.Size ?? "M?c ??nh",
-                Color = v.Color ?? "M?c ??nh",
+                Size = v.SizeNavigation != null ? v.SizeNavigation.Name : (v.Size ?? "Mặc định"),
+                Color = v.ColorNavigation != null ? v.ColorNavigation.Name : (v.Color ?? "Mặc định"),
+                v.SizeId,
+                v.ColorId,
+                ColorHexCode = v.ColorNavigation != null ? v.ColorNavigation.HexCode : null,
                 v.Stock,
-                v.Price
+                v.Price,
+                ImageUrl = v.ProductVariantImages
+                    .OrderByDescending(i => i.IsDefault)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
             })
             .ToListAsync();
 
+        
         return Ok(new
         {
             items,
@@ -75,10 +84,18 @@ public class ProductVariantsController : ControllerBase
             {
                 v.Id,
                 v.ProductId,
-                Size = v.Size ?? "M?c ??nh",
-                Color = v.Color ?? "M?c ??nh",
+                v.SizeId,
+                v.ColorId,
+                ColorHexCode = v.ColorNavigation != null ? v.ColorNavigation.HexCode : null,
+                Size = v.Size ?? "Mặc định",
+                Color = v.Color ?? "Mặc định",
                 v.Stock,
-                v.Price
+                v.Price,
+                ImageUrl = v.ProductVariantImages
+                    .OrderByDescending(i => i.IsDefault)
+                    .ThenBy(i => i.SortOrder)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
             })
             .FirstOrDefaultAsync();
 
@@ -93,8 +110,21 @@ public class ProductVariantsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] ProductVariantCreateDto dto)
     {
         if (dto == null) return BadRequest(new { message = "Invalid request" });
-        if (string.IsNullOrWhiteSpace(dto.Size))
+
+        var size = await ResolveSizeAsync(dto.SizeId, dto.Size);
+        if (dto.SizeId.HasValue && size == null)
+            return BadRequest(new { message = "Size not found" });
+
+        var sizeName = size?.Name ?? dto.Size?.Trim();
+        if (string.IsNullOrWhiteSpace(sizeName))
             return BadRequest(new { message = "Size is required" });
+
+        var color = await ResolveColorAsync(dto.ColorId, dto.Color);
+        if (dto.ColorId.HasValue && color == null)
+            return BadRequest(new { message = "Color not found" });
+
+        var colorName = color?.Name ?? (string.IsNullOrWhiteSpace(dto.Color) ? null : dto.Color.Trim());
+
         if (dto.Stock < 0)
             return BadRequest(new { message = "Stock cannot be negative" });
         if (dto.Price < 0)
@@ -106,8 +136,10 @@ public class ProductVariantsController : ControllerBase
         var entity = new ProductVariant
         {
             ProductId = dto.ProductId,
-            Size = dto.Size,
-            Color = dto.Color,
+            Size = sizeName,
+            Color = colorName,
+            SizeId = size?.Id,
+            ColorId = color?.Id,
             Stock = dto.Stock,
             Price = dto.Price
         };
@@ -115,7 +147,22 @@ public class ProductVariantsController : ControllerBase
         _context.ProductVariants.Add(entity);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            _context.ProductVariantImages.Add(new ProductVariantImage
+            {
+                ProductVariantId = entity.Id,
+                ImageUrl = dto.ImageUrl,
+                IsDefault = true,
+                SortOrder = 0
+            });
+
+            await _context.SaveChangesAsync();
+        }
+
+        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);    
+
+        
     }
 
     [HttpPut("{id}")]
@@ -138,12 +185,65 @@ public class ProductVariantsController : ControllerBase
             existing.ProductId = dto.ProductId.Value;
         }
 
-        existing.Size = dto.Size ?? existing.Size;
+        if (dto.SizeId.HasValue)
+        {
+            var size = await ResolveSizeAsync(dto.SizeId, null);
+            if (size == null) return BadRequest(new { message = "Size not found" });
+            existing.SizeId = size.Id;
+            existing.Size = size.Name;
+        }
+        else if (dto.Size != null)
+        {
+            var sizeName = dto.Size.Trim();
+            if (string.IsNullOrWhiteSpace(sizeName))
+                return BadRequest(new { message = "Size is required" });
+
+            var size = await ResolveSizeAsync(null, sizeName);
+            existing.SizeId = size?.Id;
+            existing.Size = sizeName;
+        }
+
         if (string.IsNullOrWhiteSpace(existing.Size))
             return BadRequest(new { message = "Size is required" });
-        existing.Color = dto.Color ?? existing.Color;
+
+        if (dto.ColorId.HasValue)
+        {
+            var color = await ResolveColorAsync(dto.ColorId, null);
+            if (color == null) return BadRequest(new { message = "Color not found" });
+            existing.ColorId = color.Id;
+            existing.Color = color.Name;
+        }
+        else if (dto.Color != null)
+        {
+            var colorName = dto.Color.Trim();
+            var color = await ResolveColorAsync(null, colorName);
+            existing.ColorId = color?.Id;
+            existing.Color = string.IsNullOrWhiteSpace(colorName) ? null : colorName;
+        }
+
         existing.Stock = dto.Stock ?? existing.Stock;
         existing.Price = dto.Price ?? existing.Price;
+
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            var image = await _context.ProductVariantImages
+                .FirstOrDefaultAsync(x => x.ProductVariantId == id && x.IsDefault);
+
+            if (image == null)
+            {
+                _context.ProductVariantImages.Add(new ProductVariantImage
+                {
+                    ProductVariantId = id,
+                    ImageUrl = dto.ImageUrl,
+                    IsDefault = true,
+                    SortOrder = 0
+                });
+            }
+            else
+            {
+                image.ImageUrl = dto.ImageUrl;
+            }
+        }
 
         await _context.SaveChangesAsync();
         return Ok(existing);
@@ -167,8 +267,11 @@ public class ProductVariantsController : ControllerBase
         public int ProductId { get; set; }
         public string? Size { get; set; }
         public string? Color { get; set; }
+        public int? SizeId { get; set; }
+        public int? ColorId { get; set; }
         public int Stock { get; set; }
         public decimal Price { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     public class ProductVariantUpdateDto
@@ -176,7 +279,34 @@ public class ProductVariantsController : ControllerBase
         public int? ProductId { get; set; }
         public string? Size { get; set; }
         public string? Color { get; set; }
+        public int? SizeId { get; set; }
+        public int? ColorId { get; set; }
         public int? Stock { get; set; }
         public decimal? Price { get; set; }
+        public string? ImageUrl { get; set; }
+    }
+
+    private async Task<Size?> ResolveSizeAsync(int? sizeId, string? sizeName)
+    {
+        if (sizeId.HasValue)
+            return await _context.Sizes.FirstOrDefaultAsync(s => s.Id == sizeId.Value);
+
+        if (string.IsNullOrWhiteSpace(sizeName))
+            return null;
+
+        var normalized = sizeName.Trim().ToLower();
+        return await _context.Sizes.FirstOrDefaultAsync(s => s.Name.ToLower() == normalized);
+    }
+
+    private async Task<Color?> ResolveColorAsync(int? colorId, string? colorName)
+    {
+        if (colorId.HasValue)
+            return await _context.Colors.FirstOrDefaultAsync(c => c.Id == colorId.Value);
+
+        if (string.IsNullOrWhiteSpace(colorName))
+            return null;
+
+        var normalized = colorName.Trim().ToLower();
+        return await _context.Colors.FirstOrDefaultAsync(c => c.Name.ToLower() == normalized);
     }
 }
